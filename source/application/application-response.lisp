@@ -6,6 +6,14 @@
 
 (in-package :hu.dwim.wui)
 
+
+(def function construct-cookie-domain (hostname)
+  "Return NIL, if the hostname is not a FQDN (i.e. contains no '.'),
+otherwise return .HOSTNAME"
+  (if (find #\. hostname)
+      (string+ "." hostname)
+      nil))
+
 (def function decorate-session-cookie (application response)
   ;; this function is only called when we are sending back a response after creating a session
   (bind ((request-uri (uri-of *request*)))
@@ -19,7 +27,7 @@
                  :max-age (unless *session*
                             0)
                  :comment "WUI session id"
-                 :domain (string+ "." (host-of request-uri))
+                 :domain (construct-cookie-domain (host-of request-uri))
                  :path (path-prefix-of application))
                 response))
   response)

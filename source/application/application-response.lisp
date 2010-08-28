@@ -6,17 +6,9 @@
 
 (in-package :hu.dwim.wui)
 
-
-(def function construct-cookie-domain (hostname)
-  "Return NIL, if the hostname is not a FQDN (i.e. contains no '.'),
-otherwise return .HOSTNAME"
-  (if (find #\. hostname)
-      (string+ "." hostname)
-      nil))
-
 (def function decorate-session-cookie (application response)
   ;; this function is only called when we are sending back a response after creating a session
-  (bind ((request-uri (uri-of *request*)))
+  (bind ((hostname (host-of (uri-of *request*))))
     ;; TODO assert against double additions?
     (app.debug "Decorating response ~A with the session cookie for session ~S" response *session*)
     (add-cookie (make-cookie
@@ -27,7 +19,11 @@ otherwise return .HOSTNAME"
                  :max-age (unless *session*
                             0)
                  :comment "WUI session id"
-                 :domain (construct-cookie-domain (host-of request-uri))
+                 :domain (if (find #\. hostname)
+                             (string+ "." hostname)
+                             (progn
+                               (app.warn "Domain used to reach the server is illegal (no dot character in ~S), not providing a domain argument for the session cookie" hostname)
+                               nil))
                  :path (path-prefix-of application))
                 response))
   response)

@@ -301,8 +301,7 @@
                             (server.warn "All ~A worker threads are occupied, and can't start new workers due to having already MAXIMUM-WORKER-COUNT (~A) of them" worker-count (maximum-worker-count-of server)))))
                     (setf *request-id* (processed-request-counter/increment server)))
                   (with-thread-name (string+ " / serving request " (integer-to-string *request-id*))
-                    (setf *request* (handler-bind ((uri-parse-error [abort-server-request !1]))
-                                      (read-request server stream-socket)))
+                    (setf *request* (read-request server stream-socket))
                     (with-error-log-decorator (make-error-log-decorator
                                                 (format t "~%User agent: ~S" (header-value *request* +header/user-agent+)))
                       (loop

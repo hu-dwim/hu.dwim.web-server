@@ -27,65 +27,67 @@
         (values major-version minor-version)))))
 
 (def (function o) read-http-request (stream)
-  (bind ((line (read-http-request-line stream :length-limit +maximum-http-request-header-line-length+))
-         (pieces (split-ub8-vector +space+ line))
-         ((http-method uri-octets &optional raw-version-string) pieces))
-    (http.dribble "In READ-HTTP-REQUEST, first line in ISO-8859-1 is ~S" (iso-8859-1-octets-to-string line))
-    ;; uri decoding: octets -> us-ascii -> foo%12%34bar unescape resulting in octets -> utf-8.
-    ;; processing anything else here would be ad-hoc...
-    (bind ((headers (aprog1
-                        (read-http-request-headers stream)
-                      (http.dribble "Request headers are ~S" it))))
-      (flet ((header-value (name &key mandatory)
-               (bind ((result (awhen (assoc name headers :test #'string=)
-                                (cdr it))))
-                 (when (and mandatory
-                            (not result))
-                   (illegal-http-request/error "No ~S header in the request" name))
-                 result)))
-        (bind ((version-string (us-ascii-octets-to-string raw-version-string))
-               ((:values major-version minor-version) (parse-http-version version-string))
-               (raw-uri (us-ascii-octets-to-string uri-octets))
-               (raw-uri-length (length raw-uri))
-               (raw-content-length (header-value +header/content-length+))
-               (keep-alive? (and raw-content-length
-                                 (parse-integer raw-content-length :junk-allowed #t)
-                                 (>= major-version 1)
-                                 (>= minor-version 1)
-                                 (not (string= (header-value +header/connection+) "close"))))
-               (host (header-value "Host" :mandatory #t))
-               (host-length (length host))
-               (scheme "http") ; TODO
-               (scheme-length (length scheme))
-               (uri-string (bind ((position 0)
-                                  (result (make-string (+ scheme-length #.(length "://") host-length raw-uri-length)
-                                                       :element-type 'base-char)))
-                             (replace result scheme)
-                             (replace result #.(coerce "://" 'simple-base-string) :start1 (incf position scheme-length))
-                             (replace result host :start1 (incf position #.(length "://")))
-                             (replace result raw-uri :start1 (incf position host-length))
-                             result))
-               (uri (%parse-uri uri-string))
-               (uri-parameters (query-parameters-of uri)))
-          (http.dribble "Request query parameters from the uri: ~S" uri-parameters)
-          ;; extend the parameters with the possible stuff in the request body
-          ;; making sure duplicate entries are recorded in a list keeping the original order.
-          (bind ((parameters (read-http-request-body stream
-                                                     raw-content-length
-                                                     (header-value "Content-Type")
-                                                     uri-parameters)))
-            (http.dribble "All the request query parameters: ~S" parameters)
-            (make-instance 'request
-                           :raw-uri raw-uri
-                           :uri uri
-                           :keep-alive keep-alive?
-                           :client-stream stream
-                           :query-parameters parameters
-                           :http-method (us-ascii-octets-to-string http-method)
-                           :http-version-string version-string
-                           :http-major-version major-version
-                           :http-minor-version minor-version
-                           :headers headers)))))))
+  (handler-bind ((uri-parse-error (lambda (error)
+                                    (illegal-http-request/error (princ-to-string error)))))
+    (bind ((line (read-http-request-line stream :length-limit +maximum-http-request-header-line-length+))
+           (pieces (split-ub8-vector +space+ line))
+           ((http-method uri-octets &optional raw-version-string) pieces))
+      (http.dribble "In READ-HTTP-REQUEST, first line in ISO-8859-1 is ~S" (iso-8859-1-octets-to-string line))
+      ;; uri decoding: octets -> us-ascii -> foo%12%34bar unescape resulting in octets -> utf-8.
+      ;; processing anything else here would be ad-hoc...
+      (bind ((headers (aprog1
+                          (read-http-request-headers stream)
+                        (http.dribble "Request headers are ~S" it))))
+        (flet ((header-value (name &key mandatory)
+                 (bind ((result (awhen (assoc name headers :test #'string=)
+                                  (cdr it))))
+                   (when (and mandatory
+                              (not result))
+                     (illegal-http-request/error "No ~S header in the request" name))
+                   result)))
+          (bind ((version-string (us-ascii-octets-to-string raw-version-string))
+                 ((:values major-version minor-version) (parse-http-version version-string))
+                 (raw-uri (us-ascii-octets-to-string uri-octets))
+                 (raw-uri-length (length raw-uri))
+                 (raw-content-length (header-value +header/content-length+))
+                 (keep-alive? (and raw-content-length
+                                   (parse-integer raw-content-length :junk-allowed #t)
+                                   (>= major-version 1)
+                                   (>= minor-version 1)
+                                   (not (string= (header-value +header/connection+) "close"))))
+                 (host (header-value "Host" :mandatory #t))
+                 (host-length (length host))
+                 (scheme "http")        ; TODO
+                 (scheme-length (length scheme))
+                 (uri-string (bind ((position 0)
+                                    (result (make-string (+ scheme-length #.(length "://") host-length raw-uri-length)
+                                                         :element-type 'base-char)))
+                               (replace result scheme)
+                               (replace result #.(coerce "://" 'simple-base-string) :start1 (incf position scheme-length))
+                               (replace result host :start1 (incf position #.(length "://")))
+                               (replace result raw-uri :start1 (incf position host-length))
+                               result))
+                 (uri (%parse-uri uri-string))
+                 (uri-parameters (query-parameters-of uri)))
+            (http.dribble "Request query parameters from the uri: ~S" uri-parameters)
+            ;; extend the parameters with the possible stuff in the request body
+            ;; making sure duplicate entries are recorded in a list keeping the original order.
+            (bind ((parameters (read-http-request-body stream
+                                                       raw-content-length
+                                                       (header-value "Content-Type")
+                                                       uri-parameters)))
+              (http.dribble "All the request query parameters: ~S" parameters)
+              (make-instance 'request
+                             :raw-uri raw-uri
+                             :uri uri
+                             :keep-alive keep-alive?
+                             :client-stream stream
+                             :query-parameters parameters
+                             :http-method (us-ascii-octets-to-string http-method)
+                             :http-version-string version-string
+                             :http-major-version major-version
+                             :http-minor-version minor-version
+                             :headers headers))))))))
 
 (declaim (ftype (function * simple-ub8-vector) read-http-request-line))
 

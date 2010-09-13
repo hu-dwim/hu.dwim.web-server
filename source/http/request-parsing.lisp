@@ -16,7 +16,7 @@
   (declare (type string version-string))
   (flet ((fail-unless (condition)
            (unless condition
-             (abort-server-request (format nil "Illegal http version string ~S" version-string)))))
+             (illegal-http-request/error "Illegal http version string ~S" version-string))))
     (declare (inline fail-unless))
     (fail-unless (starts-with-subseq "HTTP/" version-string))
     (bind ((dot-position (position #\. version-string :start 5)))
@@ -41,7 +41,7 @@
                                 (cdr it))))
                  (when (and mandatory
                             (not result))
-                   (abort-server-request (format nil "No ~S header in the request" name)))
+                   (illegal-http-request/error "No ~S header in the request" name))
                  result)))
         (bind ((version-string (us-ascii-octets-to-string raw-version-string))
                ((:values major-version minor-version) (parse-http-version version-string))
@@ -257,6 +257,6 @@
                                             (lambda (name file-mime-part)
                                               (record-query-parameter (cons name file-mime-part) initial-parameter-alist))))
                  (return-from read-http-request-body initial-parameter-alist)))
-              (t (abort-server-request "Invalid request content type"))))))))
+              (t (illegal-http-request/error "Don't know how to handle content type ~S" content-type))))))))
   (http.debug "Skipped parsing request body, raw Content-Type is [~S], raw Content-Length is [~S]" raw-content-type raw-content-length)
   initial-parameter-alist)

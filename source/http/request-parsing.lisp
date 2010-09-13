@@ -99,7 +99,7 @@
                (bind ((byte (read-byte stream t 'eof)))
                  (assert (not (eq byte 'eof)))
                  (when (> (incf count) length-limit)
-                   (dos-attack-detected "LENGTH-LIMIT (~A) reached in READ-HTTP-REQUEST-LINE" length-limit))
+                   (illegal-http-request/error "LENGTH-LIMIT (~A) reached in READ-HTTP-REQUEST-LINE" length-limit))
                  byte))
              (cr ()
                (let ((next-byte (read-next-char)))
@@ -116,7 +116,7 @@
                    (#.+carriage-return+
                     (cr))
                    (#.+linefeed+
-                    (error "Linefeed received without a Carriage Return"))
+                    (illegal-http-request/error "Linefeed received without a Carriage Return"))
                    (t
                     (vector-push-extend next-byte buffer)
                     (next))))))
@@ -144,7 +144,7 @@
       (for count :upfrom 0)
       (until (zerop (length header-line)))
       (when (> count +maximum-http-request-header-line-count+)
-        (dos-attack-detected "More then ~A http header lines" count))
+        (illegal-http-request/error "More than ~A http header lines" +maximum-http-request-header-line-count+))
       (for (name . value) = (split-http-header-line header-line))
       (collect (cons (us-ascii-octets-to-string name)
                      (iso-8859-1-octets-to-string value))))))
@@ -214,7 +214,7 @@
                        (funcall form-data-accumulator name content)
                        (values))))))
         (t
-         (error "Don't know how to handle the mime-part ~S (content-disposition: ~S)" mime-part content-disposition-header))))))
+         (illegal-http-request/error "Don't know how to handle the mime-part ~S (content-disposition: ~S)" mime-part content-disposition-header))))))
 
 (def (function o) read-http-request-body (stream raw-content-length raw-content-type initial-parameter-alist)
   (when (and raw-content-length

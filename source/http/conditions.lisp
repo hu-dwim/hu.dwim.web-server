@@ -48,8 +48,12 @@ TODO delme?
 (def (function e) access-denied-error ()
   (error 'access-denied-error))
 
-(def condition dos-attack-detected (simple-error request-processing-error)
+(def condition illegal-http-request/error (simple-error request-processing-error)
   ())
 
-(def function dos-attack-detected (&optional (format-control "Denial of Service attack?") &rest format-arguments)
-  (error 'dos-attack-detected :format-control format-control :format-arguments format-arguments))
+(def function illegal-http-request/error (&optional (format-control nil format-control?) &rest format-arguments)
+  (error 'illegal-http-request/error
+         :format-control (if format-control?
+                             (string+ "Illegal HTTP request: " format-control)
+                             "Illegal HTTP request")
+         :format-arguments format-arguments))

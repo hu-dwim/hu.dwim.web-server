@@ -69,7 +69,7 @@
                                           :output temporary-file))
              (exit-code (sb-ext:process-exit-code process)))
         (unless (zerop exit-code)
-          (cgi.error "CGI file ~S returned with exit code ~S" cgi-file exit-code))))
+          (cgi.error "CGI file ~S returned with exit code ~S for request ~S" cgi-file exit-code (raw-uri-of *request*)))))
     (aprog1
         (make-raw-functional-response ()
           (bind ((stream (client-stream-of *request*)))

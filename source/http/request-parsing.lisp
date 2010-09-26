@@ -30,7 +30,7 @@
   (handler-bind ((uri-parse-error (lambda (error)
                                     (illegal-http-request/error (princ-to-string error)))))
     (bind ((line (read-http-request-line stream :length-limit +maximum-http-request-header-line-length+))
-           (pieces (split-ub8-vector +space+ line))
+           (pieces (split-http-request-line line 2 3))
            ((http-method uri-octets &optional raw-version-string) pieces))
       (http.dribble "In READ-HTTP-REQUEST, first line in ISO-8859-1 is ~S" (iso-8859-1-octets-to-string line))
       ;; uri decoding: octets -> us-ascii -> foo%12%34bar unescape resulting in octets -> utf-8.
@@ -123,6 +123,19 @@
                     (vector-push-extend next-byte buffer)
                     (next))))))
       (next))))
+
+(def (function io) split-http-request-line (line &optional minimum-count maximum-count)
+  (declare (type simple-ub8-vector line)
+           (type (or null fixnum) minimum-count maximum-count)
+           (inline split-ub8-vector))
+  (bind ((pieces (split-ub8-vector +space+ line))
+         (count (length pieces)))
+    (when (or (and minimum-count
+                   (< count minimum-count))
+              (and maximum-count
+                   (< maximum-count count)))
+      (illegal-http-request/error "~S: illegal http request line ~S" 'split-http-request-line line))
+    pieces))
 
 (def (function o) read-http-request-headers (stream)
   (flet ((split-http-header-line (line)

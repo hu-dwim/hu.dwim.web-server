@@ -28,7 +28,7 @@
    (maximum-sessions-count *maximum-sessions-per-application-count* :type integer)
    (session-id->session (make-hash-table :test 'equal) :type hash-table :export :accessor)
    (administrator-email-address nil :type (or null string))
-   (lock)
+   (lock (make-recursive-lock "hu.dwim.wui application lock"))
    (running-in-test-mode #f :type boolean :accessor running-in-test-mode? :export :accessor)
    (debug-client-side :type boolean :writer (setf debug-client-side?))
    (ajax-enabled *default-ajax-enabled* :type boolean :accessor ajax-enabled?))
@@ -121,7 +121,7 @@
 
 (def (constructor o) (application path-prefix)
   (assert path-prefix)
-  (setf (lock-of -self-) (make-recursive-lock (format nil "Application lock for ~A" path-prefix))))
+  #*((:sbcl (setf (sb-thread:mutex-name (lock-of -self-)) (format nil "hu.dwim.wui application lock for application ~A" path-prefix)))))
 
 (def method session-class-of :around ((self application))
   (or (call-next-method)

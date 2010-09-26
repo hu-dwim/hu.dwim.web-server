@@ -61,7 +61,7 @@
    (client-timezone (default-timezone-of *application*) :type local-time::timezone)
    (frame-timeout *default-frame-timeout* :type integer)
    (frame-id->frame (make-hash-table :test 'equal) :type hash-table)
-   (lock nil)
+   (lock (make-recursive-lock "hu.dwim.wui session lock"))
    (computed-universe nil)
    (valid #t :type boolean :accessor is-session-valid? :export :accessor)))
 
@@ -99,8 +99,7 @@
 (def method (setf id-of) :before (id (session session))
   (awhen (id-of session)
     (error "The session ~S already has an id: ~A." session it))
-  (assert (null (lock-of session)))
-  (setf (lock-of session) (make-recursive-lock (format nil "Session lock for session ~A" id))))
+  #*((:sbcl (setf (sb-thread:mutex-name (lock-of session)) (format nil "hu.dwim.wui session lock for session ~A" id)))))
 
 (def (function i) assert-session-lock-held (session)
   (assert (is-lock-held? (lock-of session)) () "You must have a lock on the session here"))

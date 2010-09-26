@@ -135,50 +135,57 @@
                        (incoming-frame-index (parameter-value +frame-index-parameter-name+))
                        (current-frame-index (frame-index-of frame))
                        (next-frame-index (next-frame-index-of frame)))
-                  (unless (stringp current-frame-index)
-                    (setf current-frame-index (integer-to-string current-frame-index)))
-                  (unless (stringp next-frame-index)
-                    (setf next-frame-index (integer-to-string next-frame-index)))
-                  (app.debug "Incoming frame-index is ~S, current is ~S, next is ~S, action is ~A" incoming-frame-index current-frame-index next-frame-index action)
-                  (cond
-                    ((and action
-                          incoming-frame-index)
-                     (bind ((original-frame-index nil))
-                       (unwind-protect-case ()
-                           (if (equal incoming-frame-index next-frame-index)
-                               (progn
-                                 (app.dribble "Found an action and frame is in sync...")
-                                 (unless *delayed-content-request*
-                                   (setf original-frame-index (step-to-next-frame-index frame)))
-                                 (app.debug "Calling the action now...")
-                                 (bind ((response (call-action application session frame action)))
-                                   (app.dribble "Action returned response ~A" response)
-                                   (when (typep response 'response)
-                                     (return-from with-action-logic
-                                       (convert-to-primitive-response* response)))))
-                               (return-from with-action-logic
-                                 (convert-to-primitive-response* (handle-request-to-invalid-frame application session frame :out-of-sync))))
-                         (:abort
-                          ;; TODO the problem at hand is this: when the app specific error handler is called the stack is not yet unwinded
-                          ;; so this REVERT-STEP-TO-NEXT-FRAME-INDEX is not yet called, therefore the page it renders will point to an invalid
-                          ;; frame index after this unwind block is executed.
-                          ;; but on the other hand without this uwp, the "retry rendering this request" restart is broken...
-                          ;; FIXME we chose the lesser badness here and don't do the revert, so break the restart instead of the user visible error page
-                          #+nil
-                          (when original-frame-index
-                            (revert-step-to-next-frame-index frame original-frame-index))))))
-                    (incoming-frame-index
-                     (unless (equal incoming-frame-index current-frame-index)
-                       (return-from with-action-logic
-                         (convert-to-primitive-response*
-                          (handle-request-to-invalid-frame application session frame :out-of-sync)))))
-                    ;; at the time the frame is first registered, there's no frame index param in the url, so just fall through here and
-                    ;; end up at the entry points.
-                    )
-                  (app.dribble "Action logic fell through, proceeding to the body thunk...")
-                  (if requires-valid-action
-                      (handle-request-to-invalid-action application session frame action :nonexistent)
-                      (values (convert-to-primitive-response* (-body-))))))
+                  (with-error-log-decorators ((make-error-log-decorator
+                                                (format t "~%Action: ~A" action))
+                                              #+sbcl
+                                              (make-error-log-decorator
+                                                (format t "~%Action source location: ~S"
+                                                        (when action
+                                                          (swank-backend:find-source-location (sb-kernel:funcallable-instance-fun action))))))
+                    (unless (stringp current-frame-index)
+                      (setf current-frame-index (integer-to-string current-frame-index)))
+                    (unless (stringp next-frame-index)
+                      (setf next-frame-index (integer-to-string next-frame-index)))
+                    (app.debug "Incoming frame-index is ~S, current is ~S, next is ~S, action is ~A" incoming-frame-index current-frame-index next-frame-index action)
+                    (cond
+                      ((and action
+                            incoming-frame-index)
+                       (bind ((original-frame-index nil))
+                         (unwind-protect-case ()
+                             (if (equal incoming-frame-index next-frame-index)
+                                 (progn
+                                   (app.dribble "Found an action and frame is in sync...")
+                                   (unless *delayed-content-request*
+                                     (setf original-frame-index (step-to-next-frame-index frame)))
+                                   (app.debug "Calling the action now...")
+                                   (bind ((response (call-action application session frame action)))
+                                     (app.dribble "Action returned response ~A" response)
+                                     (when (typep response 'response)
+                                       (return-from with-action-logic
+                                         (convert-to-primitive-response* response)))))
+                                 (return-from with-action-logic
+                                   (convert-to-primitive-response* (handle-request-to-invalid-frame application session frame :out-of-sync))))
+                           (:abort
+                            ;; TODO the problem at hand is this: when the app specific error handler is called the stack is not yet unwinded
+                            ;; so this REVERT-STEP-TO-NEXT-FRAME-INDEX is not yet called, therefore the page it renders will point to an invalid
+                            ;; frame index after this unwind block is executed.
+                            ;; but on the other hand without this uwp, the "retry rendering this request" restart is broken...
+                            ;; FIXME we chose the lesser badness here and don't do the revert, so break the restart instead of the user visible error page
+                            #+nil
+                            (when original-frame-index
+                              (revert-step-to-next-frame-index frame original-frame-index))))))
+                      (incoming-frame-index
+                       (unless (equal incoming-frame-index current-frame-index)
+                         (return-from with-action-logic
+                           (convert-to-primitive-response*
+                            (handle-request-to-invalid-frame application session frame :out-of-sync)))))
+                      ;; at the time the frame is first registered, there's no frame index param in the url, so just fall through here and
+                      ;; end up at the entry points.
+                      )
+                    (app.dribble "Action logic fell through, proceeding to the body thunk...")
+                    (if requires-valid-action
+                        (handle-request-to-invalid-action application session frame action :nonexistent)
+                        (values (convert-to-primitive-response* (-body-)))))))
             (delete-current-frame ()
               :report (lambda (stream)
                         (format stream "Delete frame ~A" frame))

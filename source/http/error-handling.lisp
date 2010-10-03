@@ -11,7 +11,8 @@
        (headers-are-sent-p *response*)))
 
 (def function is-error-worth-logging? (error)
-  (not (typep error 'access-denied-error)))
+  (not (typep error '(or access-denied-error
+                         illegal-http-request/error))))
 
 (def function build-backtrace-string (error &key message)
   (hu.dwim.util:build-backtrace-string error :message message :timestamp (local-time:now)))

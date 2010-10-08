@@ -45,6 +45,9 @@
          (path-prefix (path-prefix-of broker))
          (relative-path (remaining-path-of-request-uri request)))
     (server.debug "PRODUCE-RESPONSE for path-prefix ~S, relative-path ~S, root-directory ~A" path-prefix relative-path root-directory)
+    (when (starts-with #\/ relative-path)
+      ;; drop any leading /'s
+      (setf relative-path (subseq relative-path (position #\/ relative-path :test-not #'char=))))
     (or (make-file-serving-response-for-query-path broker path-prefix relative-path root-directory)
         (funcall (path-does-not-exists-response-factory-of broker)
                  :broker broker

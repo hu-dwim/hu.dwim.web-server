@@ -32,6 +32,7 @@
 (def class* directory-serving-broker (broker-at-path-prefix)
   ((root-directory)
    ;; TODO (files-only #f)
+   ;; FIXME: there's a threading issue with file-path->cache-entry. access to the broker state is not serialized! fix and audit all subclasses, too...
    (file-path->cache-entry (make-hash-table :test 'equal))
    (path-does-not-exists-response-factory (lambda (&key &allow-other-keys)
                                             (make-not-found-response)))))
@@ -39,7 +40,7 @@
 (def (function e) make-directory-serving-broker (path-prefix root-directory &key priority)
   (make-instance 'directory-serving-broker :path-prefix path-prefix :root-directory root-directory :priority priority))
 
-(def method produce-response ((broker directory-serving-broker) request)
+(def method produce-response ((broker directory-serving-broker) (request request))
   (bind ((root-directory (root-directory-of broker))
          (path-prefix (path-prefix-of broker))
          (relative-path (remaining-path-of-request-uri request)))

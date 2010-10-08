@@ -10,66 +10,47 @@
 ;;; js-directory-serving-broker
 
 (def (class* e) js-directory-serving-broker (directory-serving-broker)
-  ())
+  ()
+  (:default-initargs
+   :render-directory-index #f))
 
 (def (function e) make-js-directory-serving-broker (path-prefix root-directory &key priority)
-  (make-instance 'js-directory-serving-broker :path-prefix path-prefix :root-directory root-directory :priority priority))
+  (make-instance 'js-directory-serving-broker
+                 :path-prefix path-prefix
+                 :root-directory root-directory
+                 :priority priority))
 
-(def method make-file-serving-response-for-query-path ((broker js-directory-serving-broker) path-prefix relative-path root-directory)
-  (when (and (or (zerop (length relative-path))
-                 (alphanumericp (elt relative-path 0)))
-             (ends-with-subseq ".js" relative-path))
-    (bind ((pathname (merge-pathnames (make-pathname :type "lisp")
-                                      (merge-pathnames relative-path
-                                                       root-directory)))
-           (truename (ignore-errors
-                       (probe-file pathname))))
-      (files.dribble "Looking for file ~A, truename ~A, in ~A" pathname truename broker)
-      (when truename
-        (make-file-serving-response-for-directory-entry broker truename path-prefix relative-path root-directory)))))
+(def method make-file-serving-response-for-query-path ((broker js-directory-serving-broker) (path-prefix string) (relative-path string)
+                                                       (root-directory iolib.pathnames:file-path))
+  (assert (not (starts-with #\/ relative-path)))
+  (when (ends-with-subseq ".js" relative-path)
+    (bind ((relative-path/lisp (string+ (subseq relative-path 0 (- (length relative-path) 2))
+                                        "lisp"))
+           (absolute-file-path (ignore-errors
+                                 (iolib.os:resolve-file-path relative-path/lisp :defaults root-directory)))
+           ((:values exists? kind) (when absolute-file-path
+                                     (iolib.os:file-exists-p absolute-file-path))))
+      (files.dribble "Looking for file ~A, absolute-file-path ~A, exists? ~S, kind ~S, in ~A" relative-path absolute-file-path exists? kind broker)
+      (when (and exists?
+                 (not (eq kind :directory)))
+        (make-file-serving-response-for-directory-entry broker absolute-file-path path-prefix relative-path root-directory)))))
 
-(def function js-directory-serving-broker/make-cache-key (truename content-encoding)
-  (list (namestring truename) content-encoding *debug-client-side*))
+(def method make-directory-serving-broker/cache-key ((broker js-directory-serving-broker) (absolute-file-path iolib.pathnames:file-path) content-encoding)
+  (list (iolib.pathnames:file-path-namestring absolute-file-path) content-encoding *debug-client-side*))
 
-(def method make-file-serving-response-for-directory-entry ((broker js-directory-serving-broker) truename path-prefix relative-path root-directory)
-  (with-request-parameters ((debug nil))
-    (bind ((*debug-client-side* (to-boolean debug))
-           (compress? (default-response-compression))
-           (cache-key (js-directory-serving-broker/make-cache-key truename (when compress? :deflate)))
-           (cache (file-path->cache-entry-of broker))
-           (cache-entry (gethash cache-key cache))
-           (file-write-date (file-write-date truename))
-           (bytes-to-serve nil))
-      (if (and cache-entry
-               (<= file-write-date (file-write-date-of cache-entry)))
-          (progn
-            (files.dribble "Found cached entry for ~A, in ~A" truename broker)
-            (setf (last-used-at-of cache-entry) (get-monotonic-time))
-            (setf bytes-to-serve (bytes-to-respond-of cache-entry)))
-          (unless (cl-fad:directory-pathname-p truename)
-            (files.debug "Compiling and updating cache entry for ~A, in ~A" truename broker)
-            (setf bytes-to-serve (compile-js-file-to-byte-vector broker truename :encoding :utf-8))
-            (when compress?
-              (bind (((:values compressed-bytes compressed-bytes-length) (hu.dwim.util:deflate-sequence bytes-to-serve :window-bits -15)))
-                (files.debug "Compressed response for cache entry ~A, original-size ~A, compressed-size ~A, ratio: ~,3F" truename (length bytes-to-serve) compressed-bytes-length (/ compressed-bytes-length (length bytes-to-serve)))
-                (setf bytes-to-serve (coerce-to-simple-ub8-vector compressed-bytes compressed-bytes-length))
-                (assert (= (length bytes-to-serve) compressed-bytes-length))))
-            (unless cache-entry
-              (setf cache-entry (make-directory-serving-broker/cache-entry truename))
-              (setf (gethash cache-key cache) cache-entry))
-            (setf (file-write-date-of cache-entry) file-write-date)
-            (setf (bytes-to-respond-of cache-entry) bytes-to-serve)))
-      (aprog1
-          (make-byte-vector-response* bytes-to-serve
-                                      :last-modified-at (local-time:universal-to-timestamp file-write-date)
-                                      :seconds-until-expires (* 60 60)
-                                      :content-type (content-type-for +javascript-mime-type+ :utf-8))
-        (when compress?
-          (setf (header-value it +header/content-encoding+) +content-encoding/deflate+))))))
+(def method update-directory-serving-broker/cache-entry ((broker js-directory-serving-broker) (cache-entry directory-serving-broker/cache-entry)
+                                                         (absolute-file-path iolib.pathnames:file-path) (relative-path string) (root-directory iolib.pathnames:file-path)
+                                                         response-compression)
+  (bind (((:slots bytes-to-respond last-used-at content-encoding file-write-date) cache-entry))
+    (files.debug "Compiling js file for the cache entry of ~A, in ~A" absolute-file-path broker)
+    (setf bytes-to-respond (compile-js-file-to-byte-vector broker absolute-file-path :encoding :utf-8))
+    (setf (values bytes-to-respond content-encoding)
+          (compress-response/sequence bytes-to-respond :compression response-compression))
+    (files.debug "Compiled and compressed js file for the cache entry of ~A, in ~A. Content encoding is ~S." absolute-file-path broker content-encoding)))
 
 (def generic compile-js-file-to-byte-vector (broker filename &key encoding)
-  (:method ((broker js-directory-serving-broker) filename &key (encoding +default-encoding+))
-    (bind ((body-as-string (read-file-into-string filename :external-format encoding)))
+  (:method ((broker js-directory-serving-broker) (filename iolib.pathnames:file-path) &key (encoding +default-encoding+))
+    (bind ((body-as-string (read-file-into-string (iolib.pathnames:file-path-namestring filename) :external-format encoding)))
       (setf body-as-string (string+ "`js(progn "
                                                body-as-string
                                                ")"))

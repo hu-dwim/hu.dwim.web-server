@@ -302,8 +302,10 @@
                     (setf *request-id* (processed-request-counter/increment server)))
                   (with-thread-name (string+ " / serving request " (integer-to-string *request-id*))
                     (setf *request* (read-request server stream-socket))
-                    (with-error-log-decorator (make-error-log-decorator
-                                                (format t "~%User agent: ~S" (header-value *request* +header/user-agent+)))
+                    (with-error-log-decorators ((make-error-log-decorator
+                                                  (format t "~%User agent: ~S" (header-value *request* +header/user-agent+)))
+                                                (make-error-log-decorator
+                                                  (format t "~%Request URL: ~S" (print-uri-to-string (uri-of *request*)))))
                       (loop
                         (with-simple-restart (retry-handling-request "Try again handling this HTTP request")
                           (when (and *response*

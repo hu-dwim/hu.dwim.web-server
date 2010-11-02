@@ -23,7 +23,7 @@
 (def suite* (test :in root-suite) (&key (log-level +warn+))
   (with-wui-logger-level log-level
     (with-test-compiler-environment
-      (run-child-tests))))
+      (-run-child-tests-))))
 
 (def definer test (name args &body body)
   `(def hu.dwim.stefil::test ,name ,args

@@ -14,8 +14,11 @@
   (not (typep error '(or access-denied-error
                          illegal-http-request/error))))
 
-(def function build-backtrace-string (error &key message)
-  (hu.dwim.util:build-backtrace-string error :message message :timestamp (local-time:now)))
+(def function build-error-log-message (&key error-condition message (include-backtrace #t))
+  (hu.dwim.util:build-error-log-message :error-condition error-condition
+                                        :message message
+                                        :include-backtrace include-backtrace
+                                        :timestamp (local-time:now)))
 
 (def function is-error-from-client-stream? (error client-stream)
   (bind ((client-stream-fd (iolib:fd-of client-stream)))
@@ -36,7 +39,8 @@
 (def methods handle-toplevel-error
 
   (:method :before (context (error serious-condition))
-    (bind ((message (build-backtrace-string error :message "HANDLE-TOPLEVEL-ERROR :before is now dealing with this error")))
+    (bind ((message (build-error-log-message :error-condition error
+                                             :message "HANDLE-TOPLEVEL-ERROR :before is now dealing with this error")))
       (if (is-error-worth-logging? error)
           (server.error message)
           (server.dribble message)))

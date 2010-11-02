@@ -31,7 +31,7 @@
            #:class-slots
            #:class-precedence-list
            #:|defun|
-           #:build-backtrace-string)
+           #:build-error-log-message)
 
   (:shadowing-import-from :trivial-garbage
                           #:make-hash-table)

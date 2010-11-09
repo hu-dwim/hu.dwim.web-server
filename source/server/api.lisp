@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.wui)
+(in-package :hu.dwim.web-server)
 
 (def (generic e) startup-server (server &key &allow-other-keys))
 (def (generic e) startup-server/with-lock-held (server &key &allow-other-keys))

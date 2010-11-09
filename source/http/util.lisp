@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.wui)
+(in-package :hu.dwim.web-server)
 
 (eval-when (:compile-toplevel :load-toplevel)
   (def (function io) guess-encoding-for-http-response ()

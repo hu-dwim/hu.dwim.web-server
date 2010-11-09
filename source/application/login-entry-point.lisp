@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.wui)
+(in-package :hu.dwim.web-server)
 
 (def (constant e) +login-identifier-cookie-name+           "login-identifier")
 (def (constant e) +login-entry-point-path+                 "login/")

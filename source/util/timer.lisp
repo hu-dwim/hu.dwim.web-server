@@ -1,4 +1,4 @@
-(in-package :hu.dwim.wui)
+(in-package :hu.dwim.web-server)
 
 ;;;;;;
 ;;; A simple task scheduler

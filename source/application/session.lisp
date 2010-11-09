@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.wui)
+(in-package :hu.dwim.web-server)
 
 (def class* activity-monitor-mixin ()
   ((last-activity-at (get-monotonic-time) :type number)

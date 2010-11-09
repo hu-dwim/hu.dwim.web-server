@@ -6,7 +6,7 @@
 
 (in-package :hu.dwim.def)
 
-(def package :hu.dwim.wui
+(def package :hu.dwim.web-server
   (:use :babel
         :babel-streams
         :bordeaux-threads

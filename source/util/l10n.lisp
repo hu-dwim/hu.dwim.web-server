@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.wui)
+(in-package :hu.dwim.web-server)
 
 ;;;;;;
 ;;; Listener definer
@@ -24,7 +24,7 @@
                  (l10n.info "Loaded ~A localizations for locale ~S from ~A" ,log-discriminator locale-name file)))))
          (register-locale-loaded-listener ',name)))))
 
-(def localization-loader-callback wui-localization-loader :hu.dwim.wui "localization/")
+(def localization-loader-callback wui-localization-loader :hu.dwim.web-server "localization/")
 
 ;;;;;;
 ;;; Localized string reader

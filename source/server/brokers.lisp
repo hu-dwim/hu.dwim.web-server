@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.wui)
+(in-package :hu.dwim.web-server)
 
 (def (class* e) broker-based-server (server)
   ((brokers :export :accessor :type sequence)))

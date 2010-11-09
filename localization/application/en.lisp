@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.wui)
+(in-package :hu.dwim.web-server)
 
 (def localization en
   (render-application-internal-error-page (&key administrator-email-address &allow-other-keys)

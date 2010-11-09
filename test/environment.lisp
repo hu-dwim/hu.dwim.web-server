@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.wui.test)
+(in-package :hu.dwim.web-server.test)
 
 (def macro with-wui-logger-level (log-level &body body)
   `(with-logger-level (wui ,log-level)

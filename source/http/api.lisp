@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.wui)
+(in-package :hu.dwim.web-server)
 
 (def (generic e) handle-toplevel-error (context error)
   (:documentation "Called when a signaled error is about to cross a boundary which it shouldn't.

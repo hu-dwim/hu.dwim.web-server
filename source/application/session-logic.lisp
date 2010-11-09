@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.wui)
+(in-package :hu.dwim.web-server)
 
 (def (with-macro* eo) with-session-logic (&key ensure-session (requires-valid-session #t) (lock-session #t))
   (assert (and (boundp '*application*)

@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.wui)
+(in-package :hu.dwim.web-server)
 
 (def function generate-frame-index (&optional previous)
   (if (and (running-in-test-mode? *application*)
@@ -78,8 +78,8 @@
 
 (def (function e) the-only-root-component (&optional (application *application*))
   "Helper for the REPL."
-  (bind ((session (the-only-element (hash-table-values (hu.dwim.wui::session-id->session-of application))))
-         (frame (the-only-element (hash-table-values (hu.dwim.wui::frame-id->frame-of session)))))
+  (bind ((session (the-only-element (hash-table-values (session-id->session-of application))))
+         (frame (the-only-element (hash-table-values (frame-id->frame-of session)))))
     (root-component-of frame)))
 
 (def function is-frame-alive? (frame)

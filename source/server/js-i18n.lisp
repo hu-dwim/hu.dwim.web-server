@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.wui)
+(in-package :hu.dwim.web-server)
 
 (def (constant e) +js-i18n-broker/default-path+ "/wui/js/locale-specific.js")
 

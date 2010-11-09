@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.wui)
+(in-package :hu.dwim.web-server)
 
 ;;;;;;
 ;;; js-directory-serving-broker
@@ -54,7 +54,7 @@
       (setf body-as-string (string+ "`js(progn "
                                                body-as-string
                                                ")"))
-      (bind ((*package* (find-package :hu.dwim.wui)))
+      (bind ((*package* (find-package :hu.dwim.web-server)))
         (with-local-readtable
           (setup-readtable)
           (enable-js-sharpquote-syntax)

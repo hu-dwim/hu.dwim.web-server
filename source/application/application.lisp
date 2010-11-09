@@ -4,9 +4,9 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.wui)
+(in-package :hu.dwim.web-server)
 
-(def localization-loader-callback wui-application-localization-loader :hu.dwim.wui "localization/application/" :log-discriminator "hu.dwim.wui.application")
+(def localization-loader-callback wui-application-localization-loader :hu.dwim.web-server "localization/application/" :log-discriminator "hu.dwim.web-server.application")
 
 (def (class* e) standard-application (application-with-login-support
                                       application-with-home-package

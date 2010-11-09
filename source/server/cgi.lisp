@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.wui)
+(in-package :hu.dwim.web-server)
 
 (def (class* e) cgi-broker (broker-at-path-prefix)
   ((cgi-file :type (or string pathname))
@@ -21,7 +21,7 @@
   (handle-cgi-request (cgi-file-of self) (path-prefix-of self) :environment (environment-of self)))
 
 (def constant +static-cgi-environment+ '("GATEWAY_INTERFACE=CGI/1.1"
-                                         "SERVER_SOFTWARE=hu.dwim.wui"))
+                                         "SERVER_SOFTWARE=hu.dwim.web-server"))
 
 (def function compute-cgi-environment (start-environment)
   (bind ((request-uri (uri-of *request*))

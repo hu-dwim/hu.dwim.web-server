@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.wui)
+(in-package :hu.dwim.web-server)
 
 (def function trace-request-handling ()
   (trace broker/default-handler
@@ -26,11 +26,11 @@
     (append
      (list (make-instance 'js-directory-serving-broker
                           :path-prefix "/wui/js/"
-                          :root-directory (system-relative-pathname :hu.dwim.wui "source/js/")
+                          :root-directory (system-relative-pathname :hu.dwim.web-server "source/js/")
                           :priority priority)
            (make-instance 'js-i18n-broker :priority priority))
      (when include-application-support
-       (list (make-directory-serving-broker "/static/wui/" (system-relative-pathname :hu.dwim.wui "www/") :priority priority)
+       (list (make-directory-serving-broker "/static/wui/" (system-relative-pathname :hu.dwim.web-server "www/") :priority priority)
              (make-instance 'js-component-hierarchy-serving-broker :priority priority))))))
 
 ;;;;;;

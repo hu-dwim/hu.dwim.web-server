@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.wui)
+(in-package :hu.dwim.web-server)
 
 (def condition* broker-recursion-limit-reached (request-processing-error)
   ((brokers :documentation "The stack of brokers we visited while reaching the limit"))

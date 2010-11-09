@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.wui.test)
+(in-package :hu.dwim.web-server.test)
 
 (def class authentication-application (standard-application)
   ())

@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.wui.test)
+(in-package :hu.dwim.web-server.test)
 
 (def special-variable *session-application* (make-instance 'standard-application :path-prefix "/session/"))
 
@@ -42,4 +42,4 @@
         (delete-session *application* old-session)))
     (make-redirect-response (path-prefix-of *application*))))
 
-(def file-serving-entry-point *session-application* "/session/static/" (system-relative-pathname :hu.dwim.wui.test "www/"))
+(def file-serving-entry-point *session-application* "/session/static/" (system-relative-pathname :hu.dwim.web-server.test "www/"))

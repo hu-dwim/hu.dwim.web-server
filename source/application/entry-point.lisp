@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.wui)
+(in-package :hu.dwim.web-server)
 
 (def methods entry-point-equals-for-redefinition
   (:method ((a broker-at-path) (b broker-at-path))

@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.wui.test)
+(in-package :hu.dwim.web-server.test)
 
 (def special-variable *running-test-servers* (list))
 
@@ -87,7 +87,7 @@
 
 (def function startup-project-file-server (&key (maximum-worker-count 16) (log-level +dribble+))
   (with-wui-logger-level log-level
-    (startup-test-server-with-brokers (make-directory-serving-broker "/wui/" (system-relative-pathname :hu.dwim.wui.test ""))
+    (startup-test-server-with-brokers (make-directory-serving-broker "/wui/" (system-relative-pathname :hu.dwim.web-server.test ""))
                                       :maximum-worker-count maximum-worker-count)))
 
 (def function startup-functional-response-server (&key (maximum-worker-count 4) (log-level +warn+))

@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.wui)
+(in-package :hu.dwim.web-server)
 
 (def (generic e) header-value (message header-name))
 (def (generic e) (setf header-value) (value message header-name))

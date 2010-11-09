@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.wui)
+(in-package :hu.dwim.web-server)
 
 (def function decorate-session-cookie (application response)
   ;; this function is only called when we are sending back a response after creating a session

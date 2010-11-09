@@ -6,12 +6,12 @@
 
 (in-package :hu.dwim.def)
 
-(def package :hu.dwim.wui.documentation
+(def package :hu.dwim.web-server.documentation
   (:use :hu.dwim.asdf
         :hu.dwim.common
         :hu.dwim.def
         :hu.dwim.defclass-star
         :hu.dwim.syntax-sugar
         :hu.dwim.util
-        :hu.dwim.wui)
-  (:readtable-setup (setup-readtable/same-as-package :hu.dwim.wui)))
+        :hu.dwim.web-server)
+  (:readtable-setup (setup-readtable/same-as-package :hu.dwim.web-server)))

@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.wui)
+(in-package :hu.dwim.web-server)
 
 ;;;;;;
 ;;; Variables
@@ -21,7 +21,7 @@
 (def (class* ea) application-with-dojo-support (application)
   ((dojo-skin-name "tundra")
    (dojo-file-name "dojo.js")
-   (dojo-directory-name (or (find-latest-dojo-directory-name (system-relative-pathname :hu.dwim.wui "www/dojo/") :otherwise :warn)
+   (dojo-directory-name (or (find-latest-dojo-directory-name (system-relative-pathname :hu.dwim.web-server "www/dojo/") :otherwise :warn)
                             "dojo/"))))
 
 (def method startup-broker :after ((self application-with-dojo-support))
@@ -84,7 +84,7 @@
       (return
         (if dojo-dir
             (string+ dojo-dir "/")
-            (handle-otherwise/value otherwise :default-message (list "Seems like there's not any dojo directory in ~S. Hint: see hu.dwim.wui/etc/build-dojo.sh" directory))))))))
+            (handle-otherwise/value otherwise :default-message (list "Seems like there's not any dojo directory in ~S. Hint: see hu.dwim.web-server/etc/build-dojo.sh" directory))))))))
 
 (pushnew 'dojo-widget-collector/wrapper *xhtml-body-environment-wrappers*)
 

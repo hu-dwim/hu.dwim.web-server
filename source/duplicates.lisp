@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.wui)
+(in-package :hu.dwim.web-server)
 
 ;; from arnesi
 (def macro dolist* ((iterator list &optional return-value) &body body)

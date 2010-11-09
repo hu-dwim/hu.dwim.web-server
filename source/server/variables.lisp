@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.wui)
+(in-package :hu.dwim.web-server)
 
 (def special-variable *profile-request-processing* #f
   "Should the the statistical profiler be enabled while inside the request processing body?")

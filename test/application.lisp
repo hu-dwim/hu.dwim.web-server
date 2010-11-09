@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.wui.test)
+(in-package :hu.dwim.web-server.test)
 
 (def function startup-test-server-with-test-applications (&key (maximum-worker-count 16) (log-level +debug+))
   (setf (log-level 'wui) log-level)

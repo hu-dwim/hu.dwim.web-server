@@ -4,7 +4,7 @@
 ;;;
 ;;; See LICENCE for details.
 
-(in-package :hu.dwim.wui)
+(in-package :hu.dwim.web-server)
 
 (def (function o) find-action-from-request (frame)
   (bind ((action-id (parameter-value +action-id-parameter-name+)))

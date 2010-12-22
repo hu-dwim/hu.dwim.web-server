@@ -182,7 +182,7 @@
 
 (def (function e) map-request-parameters (visitor request)
   (bind ((result (list)))
-    (dolist* ((name . value) (query-parameters-of request))
+    (dolist ((name . value) (query-parameters-of request))
       (push (funcall visitor name value) result))
     (nreverse result)))
 
@@ -256,7 +256,7 @@
       (write-sequence (string-to-us-ascii-octets status) stream)
       (write-byte +space+ stream)
       (write-crlf stream)
-      (dolist* ((name . value) headers)
+      (dolist ((name . value) headers)
         (when (string= name +header/date+)
           (setf date-header-seen? #t))
         (when value

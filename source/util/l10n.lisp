@@ -287,68 +287,11 @@
                             (setf (client-timezone-of (context.session *context*)) +utc-zone+)))))) >
     `js-onload(setf (slot-value ($ ,id) 'value) (dojo.date.stamp.toISOString (new *date)))))
 
-;; TODO: resolve this duality among localize and localized-instance-name, why do we have both?
-;; TODO localized-instance-name is quite a bad name, because it's not the instance's name, only a mere human readable, short text representation
-(def (generic e) localized-instance-name (value)
-  (:method (value)
-    (bind ((*print-level* 3)
-           (*print-length* 3))
-      (princ-to-string value)))
-
-  (:method ((value number))
-    value)
-
-  (:method ((value string))
-    value)
-
-  (:method ((value sequence))
-    (cond ((emptyp value)
-           (lookup-resource "sequence.empty"))
-          ((proper-list-p value)
-           (bind ((length (length value))
-                  (first (elt value 0))
-                  (class (class-of first))
-                  (elements-name (lookup-resource "sequence.element")))
-             (string+ (princ-to-string length)
-                      " "
-                      (when (every (of-type class) value)
-                        (localized-class-name class))
-                      " "
-                      (if (= length 1)
-                          elements-name
-                          (plural-of elements-name))
-                      " "
-                      (call-next-method))))
-          (t
-           (call-next-method))))
-
-  (:method ((class class))
-    (localized-class-name class))
-
-  (:method ((timestamp local-time:timestamp))
-    (localized-timestamp timestamp))
-
-  (:method ((function function))
-    (bind ((name (function-name function)))
-      (cond ((symbolp name)
-             (lookup-first-matching-resource
-               ("function-name" (fully-qualified-symbol-name/for-localization-entry name))
-               ("function-name" (string-downcase name))))
-            ((and (consp name)
-                  (eq (first name) 'macro-function))
-             (lookup-first-matching-resource
-               ("macro-name" (fully-qualified-symbol-name/for-localization-entry (second name)))
-               ("macro-name" (string-downcase (second name)))))
-            (t "unknown function")))))
+(def special-variable *fallback-locale-for-functional-localizations* "en"
+  "Used as a fallback locale if a functional localization can not be found and there's no *application* that would provide a default locale. It's not possible to use the usual name fallback strategy for functional localizations, so make sure that the default locale has a 100% coverage for them, otherwise it may effect the behavior of the application in certain situations.")
 
 (def function funcall-localization-function (name &rest args)
   (apply-localization-function name args))
-
-;;;;;
-;;; Initialized to "en" in l10n.lisp
-
-(def special-variable *fallback-locale-for-functional-localizations* "en"
-  "Used as a fallback locale if a functional localization can not be found and there's no *application* that would provide a default locale. It's not possible to use the usual name fallback strategy for functional localizations, so make sure that the default locale has a 100% coverage for them, otherwise it may effect the behavior of the application in certain situations.")
 
 (def function apply-localization-function (name &optional args)
   (lookup-resource name :arguments args

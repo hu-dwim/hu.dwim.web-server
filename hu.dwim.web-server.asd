@@ -41,11 +41,10 @@
                :swank)
   :components ((:module "source"
                 :components ((:file "package")
-                             (:file "duplicates" :depends-on ("package"))
                              (:file "configuration" :depends-on ("package"))
                              (:file "logger" :depends-on ("package"))
                              (:module "util"
-                              :depends-on ("logger" "configuration" "duplicates")
+                              :depends-on ("logger" "configuration")
                               :components ((:file "l10n" :depends-on ("util"))
                                            (:file "timer")
                                            (:file "util")

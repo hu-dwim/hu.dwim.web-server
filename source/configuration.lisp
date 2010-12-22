@@ -153,10 +153,7 @@
 
 ;; TODO this is not exactly the nicest way, but copy-pasting most of this file into package.lisp would also be questionable... so, decision delayed for now.
 (bind ((extended-package (find-extended-package "HU.DWIM.WEB-SERVER")))
-  (setf (hu.dwim.def::readtable-setup-form-of extended-package)
-        `(setup-readtable))
-  (awhen (find-function 'hu.dwim.def::notify-swank-about-package-readtable :otherwise nil)
-    (funcall it extended-package)))
+  (setf (hu.dwim.def::readtable-setup-form-of extended-package) `(setup-readtable)))
 
 #+nil
 (def (macro e) transform-js (&body body)

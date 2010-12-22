@@ -80,6 +80,6 @@
     (eval
      (read-from-string
       "(progn
-         (setf (log-level 'wui) +debug+)
+         (setf (log-level 'log) +debug+)
          (setf *debug-on-error* t))")))
-  (warn "Set WUI log level to +debug+ and enabled server-side debugging"))
+  (warn "Set hu.dwim.web-server log level to +debug+ and enabled server-side debugging"))

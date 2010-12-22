@@ -31,7 +31,8 @@
            #:class-slots
            #:class-precedence-list
            #:|defun|
-           #:build-error-log-message)
+           #:build-error-log-message
+           #:log)
 
   (:shadowing-import-from :trivial-garbage
                           #:make-hash-table)

@@ -6,13 +6,11 @@
 
 (in-package :hu.dwim.web-server)
 
-(def logger wui ())
+(def logger log ())
 
-(def logger rerl (wui))
-(def logger threads (wui))
-(def logger timer (wui))
-(def logger component (wui))
-(def logger incremental (component))
+(def logger rerl (log))
+(def logger threads (log))
+(def logger timer (log))
 
 (def logger http (rerl))
 (def logger app (rerl))

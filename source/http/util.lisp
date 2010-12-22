@@ -105,7 +105,7 @@
   (labels ((call-in-environment (thunk wrappers)
              (if wrappers
                  (progn
-                   (wui.debug "Wrapping xhtml body with ~S" (first wrappers))
+                   (log.debug "Wrapping xhtml body with ~S" (first wrappers))
                    (funcall (first wrappers) (lambda ()
                                                (call-in-environment thunk (rest wrappers)))))
                  (funcall thunk))))

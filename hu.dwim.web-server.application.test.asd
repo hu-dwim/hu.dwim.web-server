@@ -14,9 +14,10 @@
   :depends-on (:hu.dwim.web-server.application
                :hu.dwim.web-server.test)
   :components ((:module "test"
-                :components ((:file "application" :depends-on ("authentication" "echo" "parameter" "performance" "session"))
-                             (:file "authentication")
-                             (:file "echo")
-                             (:file "parameter")
-                             (:file "performance")
-                             (:file "session")))))
+                :components ((:module "applications"
+                              :components ((:file "authentication")
+                                           (:file "echo")
+                                           (:file "parameter")
+                                           (:file "performance")
+                                           (:file "session")))
+                             (:file "test-applications" :depends-on ("applications"))))))

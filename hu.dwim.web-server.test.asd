@@ -16,6 +16,6 @@
                :hu.dwim.web-server
                :hu.dwim.web-server+swank)
   :components ((:module "test"
-                :components ((:file "package")
-                             (:file "environment" :depends-on ("package"))
-                             (:file "http" :depends-on ("environment"))))))
+                :components ((:file "environment" :depends-on ("package"))
+                             (:file "package")
+                             (:file "test-servers" :depends-on ("environment"))))))

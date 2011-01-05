@@ -37,11 +37,4 @@
 
 (in-package :hu.dwim.web-server.test)
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  ;; import all the internal symbol of WUI
-  (bind ((wui-package (find-package :hu.dwim.web-server))
-         (wui.test-package (find-package :hu.dwim.web-server.test)))
-    (iter (for symbol :in-package wui-package :external-only nil)
-          (when (and (eq (symbol-package symbol) wui-package)
-                     (not (find-symbol (symbol-name symbol) wui.test-package)))
-            (import symbol)))))
+(import-all-owned-symbols :hu.dwim.web-server :hu.dwim.web-server.test)

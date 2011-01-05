@@ -50,14 +50,19 @@
 
 (def generic compile-js-file-to-byte-vector (broker filename &key encoding)
   (:method ((broker js-directory-serving-broker) (filename iolib.pathnames:file-path) &key (encoding +default-encoding+))
-    (bind ((body-as-string (read-file-into-string (iolib.pathnames:file-path-namestring filename) :external-format encoding)))
+    (bind ((body-as-string (read-file-into-string (iolib.pathnames:file-path-namestring filename) :external-format encoding))
+           (in-package-position (search "(in-package " body-as-string))
+           (in-package-form (when in-package-position
+                              (read-from-string body-as-string #t nil :start in-package-position)))
+           (*package* (find-package (if in-package-form
+                                        (second in-package-form)
+                                        :hu.dwim.web-server))))
       (setf body-as-string (string+ "`js(progn "
                                                body-as-string
                                                ")"))
-      (bind ((*package* (find-package :hu.dwim.web-server)))
-        (with-local-readtable
-          (setup-readtable)
-          (enable-js-sharpquote-syntax)
-          (coerce-to-simple-ub8-vector (with-output-to-sequence (*js-stream*)
-                                         (bind ((forms (read-from-string body-as-string)))
-                                           (eval forms)))))))))
+      (with-local-readtable
+        (setup-readtable)
+        (enable-js-sharpquote-syntax)
+        (coerce-to-simple-ub8-vector (with-output-to-sequence (*js-stream*)
+                                       (bind ((forms (read-from-string body-as-string)))
+                                         (eval forms))))))))

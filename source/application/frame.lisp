@@ -22,7 +22,7 @@
    (next-frame-index (generate-frame-index 0) :type string)
    (client-state-sink-id->client-state-sink (make-hash-table :test 'equal) :type hash-table)
    (action-id->action (make-hash-table :test 'equal) :type hash-table)
-   (root-component nil :type component :export #t)
+   (root-component nil :export #t)
    (debug-component-hierarchy #f :type boolean :accessor debug-component-hierarchy?)
    (valid #t :type boolean :accessor is-frame-valid? :export :accessor)))
 

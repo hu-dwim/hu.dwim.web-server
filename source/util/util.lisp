@@ -9,10 +9,6 @@
 ;;;;;;
 ;;; Utils
 
-(def (function io) maybe-make-xml-attribute (name value)
-  (when value
-    (make-xml-attribute name value)))
-
 (deftype simple-ub8-vector (&optional (length '*))
   `(simple-array (unsigned-byte 8) (,length)))
 
@@ -85,7 +81,7 @@
      (t #.(warn "~S is not implemented for your platform." 'is-lock-held?)
         (error "~S is not implemented for your platform." 'is-lock-held?))))
 
-(def function mailto-href (email-address)
+(def (function e) mailto-href (email-address)
   (string+ "mailto:" email-address))
 
 (def (function io) new-random-hash-table-key (hash-table key-length &key prefix)

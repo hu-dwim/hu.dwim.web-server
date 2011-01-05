@@ -6,49 +6,49 @@
 
 (in-package :hu.dwim.web-server)
 
-(log.debug "Started evaluating wui.js")
+(log.debug "Started evaluating main.js of hu.dwim.web-server")
 
-(dojo.getObject "wui" #t)
-(dojo.getObject "wui.io" #t)
-(dojo.getObject "wui.i18n" #t)
-(dojo.getObject "wui.field" #t)
-(dojo.getObject "wui.help" #t)
+(dojo.getObject "hdws" #t)
+(dojo.getObject "hdws.io" #t)
+(dojo.getObject "hdws.i18n" #t)
+(dojo.getObject "hdws.field" #t)
+(dojo.getObject "hdws.help" #t)
 
-(defun wui.connect (objects event function)
-  (assert objects "wui.connect called with nil object")
-  (assert function "wui.connect called with nil function")
+(defun hdws.connect (objects event function)
+  (assert objects "hdws.connect called with nil object")
+  (assert function "hdws.connect called with nil function")
   (unless dojo.config.isDebug
     (bind ((original-function function))
       (setf function (lambda ()
                        (try
                             (.apply original-function this arguments)
                          (catch (e)
-                           (wui.inform-user-about-error "error.generic-javascript-error")))))))
+                           (hdws.inform-user-about-error "error.generic-javascript-error")))))))
   (flet ((lookup (id)
            (bind ((result (dojo.byId id)))
-             (assert result "lookup of the dom node " id " in wui.connect failed")
+             (assert result "lookup of the dom node " id " in hdws.connect failed")
              (return result))))
     (if (dojo.isArray object)
         (dolist (object objects)
           (dojo.connect (lookup object) event function))
         (return (dojo.connect (lookup objects) event function)))))
 
-(defun wui.disconnect (connection)
-  (assert connection "wui.disconnect called with nil connection")
+(defun hdws.disconnect (connection)
+  (assert connection "hdws.disconnect called with nil connection")
   (dojo.disconnect connection))
 
-(defun wui.maybe-invoke-debugger ()
+(defun hdws.maybe-invoke-debugger ()
   ;; doesn't work in chrome? (apply window.console.error arguments)
   (when dojo.config.isDebug
     debugger))
 
-(defun wui.map (fn array)
+(defun hdws.map (fn array)
   (do ((i 0 (1+ i)))
       ((>= i array.length))
     (setf (aref array i) (fn (aref array i))))
   (return array))
 
-(defun wui.map-child-nodes (node visitor)
+(defun hdws.map-child-nodes (node visitor)
   ;; NOTE: some usages if this function are due to the fact that in some cases node.childNodes does not work in IE
   (let ((children (array))
         (child node.firstChild))
@@ -60,10 +60,10 @@
       (visitor child))
     (return children)))
 
-(defun wui.shallow-copy (object)
+(defun hdws.shallow-copy (object)
   (return (dojo.mixin (create) object)))
 
-(defun wui.append-query-parameter (url name value)
+(defun hdws.append-query-parameter (url name value)
   (setf url (+ url
                (if (< (.index-of url "?") 0)
                    "?"
@@ -73,24 +73,16 @@
                (encodeURIComponent value)))
   (return url))
 
-(defun wui.decorate-url-with-modifier-keys (url event)
-  (when event.shiftKey
-    (setf url (wui.append-query-parameter url
-                                          #.(escape-as-uri +shitf-key-parameter-name+)
-                                          "t")))
-  (when event.ctrlKey
-    (setf url (wui.append-query-parameter url
-                                          #.(escape-as-uri +control-key-parameter-name+)
-                                          "t")))
-  (when (or event.altKey
-            event.metaKey)
-    (setf url (wui.append-query-parameter url
-                                          #.(escape-as-uri +alt-key-parameter-name+)
-                                          "t")))
-  (return url))
+(defun hdws.decorate-url-with-modifier-keys (url event)
+  (bind ((value (+ (if event.shiftKey 1 0)
+                   (if event.ctrlKey 2 0)
+                   (if (or event.altKey event.metaKey) 4 0))))
+    (return (hdws.append-query-parameter url
+                                        #.(escape-as-uri +modifier-keys-parameter-name+)
+                                        value))))
 
 #+nil ; currently unused
-(defun wui.decorate-url-with-frame-and-action (url (frame-id wui.frame-id) (frame-index wui.frame-index) action-id)
+(defun hdws.decorate-url-with-frame-and-action (url (frame-id hdws.frame-id) (frame-index hdws.frame-index) action-id)
   (setf url (+ url (if (< (.index-of url "?") 0)
                        "?"
                        "&")))
@@ -100,7 +92,7 @@
     (setf url (+ url "&" #.(escape-as-uri +action-id-parameter-name+) "=" (encodeURIComponent action-id))))
   (return url))
 
-(defun wui.absolute-url-from (url)
+(defun hdws.absolute-url-from (url)
   (return
     (if (> (.index-of url ":") 0) ; KLUDGE this test is fragile here
         url
@@ -110,19 +102,19 @@
            url))))
 
 ;; this is a condition object, even if it looks like a function...
-(defun wui.communication-error (message)
-  (setf this.type "wui.communication-error")
+(defun hdws.communication-error (message)
+  (setf this.type "hdws.communication-error")
   (setf this.message message))
 
-(defun wui.inform-user-about-js-error ()
-  (wui.inform-user-about-error "error.generic-javascript-error" :title "error.generic-javascript-error.title"))
+(defun hdws.inform-user-about-js-error ()
+  (hdws.inform-user-about-error "error.generic-javascript-error" :title "error.generic-javascript-error.title"))
 
 ;; TODO factor out dialog code?
-(defun wui.inform-user-about-error (message &key (title "error.generic-javascript-error.title"))
+(defun hdws.inform-user-about-error (message &key (title "error.generic-javascript-error.title"))
   (log.debug "Informing user about error, message is '" message "', title is '" title "'")
   (dojo.require "dijit.Dialog")
-  (setf message (wui.i18n.localize message))
-  (setf title (wui.i18n.localize title))
+  (setf message (hdws.i18n.localize message))
+  (setf title (hdws.i18n.localize title))
   (bind ((dialog (new dijit.Dialog (create :title title)))
          (reload-button (new dijit.form.Button (create :label #"action.reload-page")))
          (cancel-button (new dijit.form.Button (create :label #"action.cancel"))))
@@ -130,9 +122,9 @@
     ;; TODO add a 'float: right' or equivalent to the container of the buttons
     (reload-button.placeAt dialog.containerNode)
     (cancel-button.placeAt dialog.containerNode)
-    (wui.connect reload-button "onClick" (lambda ()
+    (hdws.connect reload-button "onClick" (lambda ()
                                            (window.location.reload)))
-    (wui.connect cancel-button "onClick" (lambda ()
+    (hdws.connect cancel-button "onClick" (lambda ()
                                            (dialog.hide)
                                            (dialog.destroyRecursive)))
     (dialog.show)))
@@ -140,47 +132,47 @@
 ;;;;;;
 ;;; io
 
-(setf wui.io.sync-ajax-action-in-progress false)
+(setf hdws.io.sync-ajax-action-in-progress false)
 
 ;; open dojo issue about error handler not being called: http://bugs.dojotoolkit.org/ticket/10985
-(defun wui.io.action (url &key on-success on-error event (ajax true) subject-dom-node (sync true) (xhr-sync false) (send-client-state true))
+(defun hdws.io.action (url &key on-success on-error event (ajax true) subject-dom-node (sync true) (xhr-sync false) (send-client-state true))
   (when event
-    (setf url (wui.decorate-url-with-modifier-keys url event)))
-  (bind ((decorated-url (wui.append-query-parameter url
+    (setf url (hdws.decorate-url-with-modifier-keys url event)))
+  (bind ((decorated-url (hdws.append-query-parameter url
                                                     #.(escape-as-uri +ajax-aware-parameter-name+)
                                                     (if ajax "t" "")))
          (form (aref document.forms 0)))
-    (wui.save-scroll-position "content")
+    (hdws.save-scroll-position "content")
     (if ajax
         (bind ((ajax-target (dojo.byId subject-dom-node))
                (ajax-indicator-teardown nil))
-          (when wui.io.sync-ajax-action-in-progress
-            (log.warn "Ignoring a (wui.io.action :sync true :ajax true ...) call because there's already a pending sync action")
+          (when hdws.io.sync-ajax-action-in-progress
+            (log.warn "Ignoring a (hdws.io.action :sync true :ajax true ...) call because there's already a pending sync action")
             (return))
           (log.debug "Will fire an ajax request, ajax-target: " ajax-target)
           (when sync
-            (setf wui.io.sync-ajax-action-in-progress true))
+            (setf hdws.io.sync-ajax-action-in-progress true))
           (flet ((xhr-finished ()
                    (when ajax-indicator-teardown
                      (ajax-indicator-teardown))
                    (when sync
-                     (setf wui.io.sync-ajax-action-in-progress false))))
+                     (setf hdws.io.sync-ajax-action-in-progress false))))
             (when ajax-target
-              (setf ajax-indicator-teardown (wui.io.install-ajax-progress-indicator ajax-target)))
-            (wui.io.xhr-post :url decorated-url
+              (setf ajax-indicator-teardown (hdws.io.install-ajax-progress-indicator ajax-target)))
+            (hdws.io.xhr-post :url decorated-url
                              ;; :sync true pretty much stops the whole browser tab including animated images...
                              :sync xhr-sync
                              :form (when send-client-state
                                      form)
                              :on-error (lambda (response io-args)
                                          (xhr-finished)
-                                         (wui.io.process-ajax-network-error response io-args)
+                                         (hdws.io.process-ajax-network-error response io-args)
                                          (when on-error
                                            (on-error)))
                              :on-success (lambda (response io-args)
                                            (xhr-finished)
-                                           (wui.io.clear-ajax-replacement-markers)
-                                           (wui.io.process-ajax-answer response io-args)
+                                           (hdws.io.clear-ajax-replacement-markers)
+                                           (hdws.io.process-ajax-answer response io-args)
                                            (when on-success
                                              (on-success))))))
         (if (and send-client-state
@@ -191,7 +183,7 @@
               (form.submit))
             (setf window.location.href decorated-url)))))
 
-(defun wui.io.install-ajax-progress-indicator (target-node)
+(defun hdws.io.install-ajax-progress-indicator (target-node)
   (bind ((animation nil)
          (progress-node (document.create-element "div")))
     (dojo.style progress-node "opacity" 0)
@@ -216,9 +208,9 @@
         ;; dojo.destroy can deal with parentNode = null (which sometimes happens maybe because the indicator dom node gets GC'd, possibly due to its parent node having been ajax-replaced?)
         (dojo.destroy progress-node)
         (dojo.removeClass target-node "ajax-target")
-        (.play (wui.io.make-ajax-replacement-fade-in target-node))))))
+        (.play (hdws.io.make-ajax-replacement-fade-in target-node))))))
 
-(defun wui.io.make-ajax-replacement-fade-in (node start-opacity)
+(defun hdws.io.make-ajax-replacement-fade-in (node start-opacity)
   (return
     (dojo.animateProperty
      (create :node node
@@ -228,14 +220,14 @@
                                                              (dojo.style node "opacity"))
                                                   :end 1))))))
 
-(defun wui.io.make-action-event-handler (href &key on-success on-error subject-dom-node (ajax true)
+(defun hdws.io.make-action-event-handler (href &key on-success on-error subject-dom-node (ajax true)
                                          (send-client-state true) (sync true) (xhr-sync false))
   (return
     (lambda (event connection)
-      (log.debug "An action event handler made by wui.io.make-action-event-handler is being invoked on event " event ", connection " connection)
+      (log.debug "An action event handler made by hdws.io.make-action-event-handler is being invoked on event " event ", connection " connection)
       (assert event)
       (assert connection)
-      (wui.io.action href
+      (hdws.io.action href
                      :event event
                      :ajax ajax
                      :sync sync
@@ -249,11 +241,11 @@
                      :subject-dom-node subject-dom-node
                      :send-client-state send-client-state))))
 
-(defun wui.io.connect-action-event-handler (id event-name handler &key one-shot (stop-event true))
+(defun hdws.io.connect-action-event-handler (id event-name handler &key one-shot (stop-event true))
   (flet ((connect-one (id)
            (if ($ id)
                (bind ((connection nil))
-                 (setf connection (wui.connect id event-name
+                 (setf connection (hdws.connect id event-name
                                                (lambda (event)
                                                  (when stop-event
                                                    (log.debug "Action handler on id " id ", node " (dojo.byId id) " is stopping event " event)
@@ -262,18 +254,18 @@
                                                    ;; TODO support different one-shot strategies? 1) disconnect, 2) use a captured boolean guard.
                                                    ;; 2) with stop-event could be used to hide events from covering parent nodes
                                                    (log.debug "Disconnecting one-shot event handler after firing; id " id  ", node " (dojo.byId id) ", connection " connection)
-                                                   (wui.disconnect connection))
+                                                   (hdws.disconnect connection))
                                                  (handler event connection))))
                  (return connection))
                (progn
                  (log.error "Node not found when trying to connect event handler. Id is " id)
-                 (wui.maybe-invoke-debugger)))))
+                 (hdws.maybe-invoke-debugger)))))
     (if (dojo.isArray id)
         (dolist (one id)
           (connect-one one))
         (return (connect-one id)))))
 
-(defun wui.io.connect-action-event-handlers (handlers)
+(defun hdws.io.connect-action-event-handlers (handlers)
   (flet ((to-boolean (x default-value)
            (cond
              ((= x 1) (return true))
@@ -291,8 +283,8 @@
                   (stop-event        (to-boolean (.shift handler) true))
                   (send-client-state (to-boolean (.shift handler) true))
                   (sync              (to-boolean (.shift handler) true)))
-             (wui.io.connect-action-event-handler
-              id event-name (wui.io.make-action-event-handler href
+             (hdws.io.connect-action-event-handler
+              id event-name (hdws.io.make-action-event-handler href
                                                               :subject-dom-node subject-dom-node
                                                               :ajax ajax
                                                               :send-client-state send-client-state
@@ -302,33 +294,18 @@
     (foreach #'connect-one handlers)))
 
 ;; open dojo issue about (sometimes defaulting) node.type taking precedence over node.dojoType: http://bugs.dojotoolkit.org/ticket/10951
-(defun wui.io.instantiate-dojo-widgets (widget-ids)
+(defun hdws.io.instantiate-dojo-widgets (widget-ids)
   (log.debug "Instantiating (and destroying previous versions of) the following widgets " widget-ids)
   (dolist (widget-id widget-ids)
     (awhen (dijit.byId widget-id)
       (.destroyRecursive it)))
-  (dojo.parser.instantiate (wui.map dojo.byId widget-ids)))
+  (dojo.parser.instantiate (hdws.map dojo.byId widget-ids)))
 
-(defun wui.io.lazy-context-menu-handler (event connection href id parent-id)
-  ((wui.io.make-action-event-handler
-    href
-    :ajax true
-    :subject-dom-node parent-id
-    :send-client-state false
-    :sync true
-    :on-success (lambda (event connection)
-                  (aif (dijit.byId id)
-                       ;; TODO why does it ever happen that the ajax answer is empty?
-                       ;; TODO don't use dojo internals. find a way to reinvoke the same event, or make sure some other way that the context menu comes up
-                       (._scheduleOpen it event.target nil (create :x event.pageX :y event.pageY))
-                       (log.error "Context menu was not found after processing the ajax answer (empty ajax answer?). The id we looked for is " id))))
-   event connection))
-
-(defun wui.io.postprocess-inserted-node (original-node imported-node)
+(defun hdws.io.postprocess-inserted-node (original-node imported-node)
   ;; this used to be needed before WITH-COLLAPSED-JS-SCRIPTS started to collect all js fragments into a toplevel script node in the ajax answer. might come handy for something later, so leave it for now...
   )
 
-(defun wui.io.eval-script-tag (node)
+(defun hdws.io.eval-script-tag (node)
   (let ((type (node.getAttribute "type")))
     (if (= type "text/javascript")
         (let ((script node.text))
@@ -340,14 +317,14 @@
 
 ;; TODO implement something smarter to deal with the user clicking around on the client while the server is busy.
 ;; when sync is false, the user can stack up many ajax requests queueing on the server at the session lock...
-(defun wui.io.xhr-post (&key url form
+(defun hdws.io.xhr-post (&key url form
                         (sync false)
-                        (on-error wui.io.process-ajax-network-error)
-                        (on-success wui.io.process-ajax-answer)
+                        (on-error hdws.io.process-ajax-network-error)
+                        (on-success hdws.io.process-ajax-answer)
                         (handle-as "xml"))
   ;; absolutize url if it's a relative one.
   (when url
-    (setf url (wui.absolute-url-from url)))
+    (setf url (hdws.absolute-url-from url)))
   (bind ((params (create :url url
                          :form form
                          :sync sync
@@ -356,19 +333,19 @@
                          :load on-success)))
     (return (dojo.xhrPost params))))
 
-(defun wui.io.process-ajax-network-error (response ioArgs)
-  (log.error "wui.io.process-ajax-network-error called with response " response ", ioArgs " ioArgs)
+(defun hdws.io.process-ajax-network-error (response ioArgs)
+  (log.error "hdws.io.process-ajax-network-error called with response " response ", ioArgs " ioArgs)
   (bind ((network-error? ioArgs.error))
     ;; NOTE: this is a fragile way to differentiate between network errors and random js errors. http://bugs.dojotoolkit.org/ticket/6814
     (cond
       (network-error?
-       (wui.inform-user-about-error "error.network-error"
+       (hdws.inform-user-about-error "error.network-error"
                                     :title "error.network-error.title"))
       ((not dojo.config.isDebug)
-       (wui.inform-user-about-error "error.generic-javascript-error"
+       (hdws.inform-user-about-error "error.generic-javascript-error"
                                     :title "error.generic-javascript-error.title")))))
 
-(defun wui.io.import-ajax-received-xhtml-node (node)
+(defun hdws.io.import-ajax-received-xhtml-node (node)
   ;; Makes an XMLHTTP-received node suitable for inclusion in the document.
   (log.debug "Importing ajax answer node with id " (.getAttribute node "id"))
   (cond
@@ -407,7 +384,7 @@
                       (setf imported-td.innerHTML body)
                       (copy-attributes td imported-td)
                       (result.appendChild imported-td))
-                    (result.appendChild (wui.io.import-ajax-received-xhtml-node td)))))
+                    (result.appendChild (hdws.io.import-ajax-received-xhtml-node td)))))
              (t
               ;; create a node and setf its innerXML property
               ;; this will parse the xhtml we received and convert it
@@ -425,11 +402,11 @@
 
 ;; Return a lambda that when passed a root node, will call the visitor with each of those children
 ;; that have the given tag-name.
-(defun wui.io.make-dom-node-walker (tag-name visitor (import-node-p true) (toplevel-p false))
+(defun hdws.io.make-dom-node-walker (tag-name visitor (import-node-p true) (toplevel-p false))
   (return
     (lambda (root)
       ;; NOTE: it used to be a dolist but root.childNodes does not work in IE by some weird reason
-      (wui.map-child-nodes
+      (hdws.map-child-nodes
        root
        (lambda (toplevel-node)
          (log.debug "Walking at node " toplevel-node)
@@ -441,12 +418,12 @@
                      (id (.getAttribute node "id")))
                  (log.debug "Processing " node " with id " id)
                  (when import-node-p
-                   (setf node (wui.io.import-ajax-received-xhtml-node node)))
+                   (setf node (hdws.io.import-ajax-received-xhtml-node node)))
                  (visitor node original-node))
                (progn
                  (log.debug "Will process " toplevel-node.child-nodes.length " node(s) of type '" tag-name "'")
                  ;; NOTE: it used to be a dolist but root.childNodes does not work in IE by some weird reason
-                 (wui.map-child-nodes
+                 (hdws.map-child-nodes
                   toplevel-node ; create a copy and iterate on that
                   (lambda (node)
                     (when (if dojo.isIE
@@ -456,19 +433,19 @@
                             (id (.getAttribute node "id")))
                         (log.debug "Processing " tag-name " node with id " id)
                         (when import-node-p
-                          (setf node (wui.io.import-ajax-received-xhtml-node node)))
+                          (setf node (hdws.io.import-ajax-received-xhtml-node node)))
                         (visitor node original-node)))))))))))))
 
 ;; Returns a lambda that can be used as a dojo :load handler.  Will do some sanity checks
 ;; on the ajax answer, report any possible server errors, then walk the nodes with the given
 ;; tag-name and call the visitor on them.  If the visitor returns a node, then postprocess the
 ;; returned node as an added dom html fragment.
-(defun wui.io.make-ajax-answer-processor (tag-name visitor (import-node-p true) (toplevel-p false))
-  (let ((node-walker (wui.io.make-dom-node-walker tag-name
+(defun hdws.io.make-ajax-answer-processor (tag-name visitor (import-node-p true) (toplevel-p false))
+  (let ((node-walker (hdws.io.make-dom-node-walker tag-name
                                                   (lambda (node original-node)
                                                     (when (visitor node original-node)
                                                       (log.debug "Calling postprocess-inserted-node on node " node)
-                                                      (wui.io.postprocess-inserted-node original-node node)))
+                                                      (hdws.io.postprocess-inserted-node original-node node)))
                                                   import-node-p
                                                   toplevel-p)))
     (return
@@ -477,20 +454,20 @@
         (with-ajax-answer-logic response
           (node-walker response))))))
 
-(setf wui.io.marked-ajax-replacements (array))
+(setf hdws.io.marked-ajax-replacements (array))
 
-(defun wui.io.mark-ajax-replacement (node)
+(defun hdws.io.mark-ajax-replacement (node)
   (when dojo.config.isDebug
     (dojo.addClass node "ajax-replacement")
-    (wui.io.marked-ajax-replacements.push node)))
+    (hdws.io.marked-ajax-replacements.push node)))
 
-(defun wui.io.clear-ajax-replacement-markers ()
+(defun hdws.io.clear-ajax-replacement-markers ()
   (when dojo.config.isDebug
-    (dolist (node wui.io.marked-ajax-replacements)
+    (dolist (node hdws.io.marked-ajax-replacements)
       (dojo.removeClass node "ajax-replacement"))
-    (setf wui.io.marked-ajax-replacements (array))))
+    (setf hdws.io.marked-ajax-replacements (array))))
 
-(bind ((dom-replacer (wui.io.make-ajax-answer-processor
+(bind ((dom-replacer (hdws.io.make-ajax-answer-processor
                       "dom-replacements"
                       (lambda (replacement-node)
                         (bind ((id (.getAttribute replacement-node "id"))
@@ -504,10 +481,10 @@
                                   (setf old-opacity 1))
                                 (dojo.style replacement-node "opacity" old-opacity)
                                 (.replace-child parent-node replacement-node old-node)
-                                (wui.io.mark-ajax-replacement replacement-node)
+                                (hdws.io.mark-ajax-replacement replacement-node)
                                 (log.debug "Fading back replacement-node " replacement-node)
-                                (bind ((animation (wui.io.make-ajax-replacement-fade-in replacement-node old-opacity)))
-                                  (wui.connect animation "onEnd"
+                                (bind ((animation (hdws.io.make-ajax-replacement-fade-in replacement-node old-opacity)))
+                                  (hdws.connect animation "onEnd"
                                                (lambda ()
                                                  (unless (eq replacement-node (dojo.byId id))
                                                    ;; KLUDGE this should not happen, but it happens with context menus...
@@ -517,16 +494,16 @@
                                 (log.debug "Successfully replaced node with id " id))
                               (progn
                                 (log.error "Old version of replacement node " replacement-node " with id '" id "' was not found on the client side")
-                                (wui.maybe-invoke-debugger))))))))
-  (setf wui.io.process-ajax-answer
+                                (hdws.maybe-invoke-debugger))))))))
+  (setf hdws.io.process-ajax-answer
         (lambda (response args)
           ;; replace some components (dom nodes)
-          (log.debug "wui.io.process-ajax-answer speaking. Called with response " response ", args " args)
+          (log.debug "hdws.io.process-ajax-answer speaking. Called with response " response ", args " args)
           (log.debug "Calling dom-replacer...")
           (dom-replacer response args)
           (log.debug "...dom-replacer returned")
           ;; look for 'script' tags and execute them with 'current-ajax-answer' bound
-          (let ((script-evaluator (wui.io.make-ajax-answer-processor "script"
+          (let ((script-evaluator (hdws.io.make-ajax-answer-processor "script"
                                                                      (lambda (script-node)
                                                                        ;; TODO handle/assert for script type attribute
                                                                        (let ((script (dojox.xml.parser.textContent script-node)))
@@ -545,17 +522,17 @@
 ;;; debug
 
 ;; from http://turtle.dojotoolkit.org/~david/recss.html
-(defun wui.reload-css ()
+(defun hdws.reload-css ()
   (dolist (link (document.getElementsByTagName "link"))
     (when (and (>= (.indexOf (.toLowerCase link.rel) "stylesheet") 0)
                link.href)
       (bind ((href (.replace link.href (regexp "(&|\\?)forceReload=\\d+") "")))
-        (setf link.href (wui.append-query-parameter href "forceReload" (.valueOf (new Date))))))))
+        (setf link.href (hdws.append-query-parameter href "forceReload" (.valueOf (new Date))))))))
 
 ;;;;;;
 ;;; scroll
 
-(defun wui.reset-scroll-position ((content :by-id))
+(defun hdws.reset-scroll-position ((content :by-id))
   (when content
     (bind ((form (aref document.forms 0))
            (sx (aref form #.+scroll-x-parameter-name+))
@@ -564,7 +541,7 @@
       (setf content.scrollLeft sx.value)
       (setf content.scrollTop sy.value))))
 
-(defun wui.save-scroll-position ((content :by-id))
+(defun hdws.save-scroll-position ((content :by-id))
   (when content
     (bind ((form (aref document.forms 0))
            (sx (aref form #.+scroll-x-parameter-name+))
@@ -574,278 +551,26 @@
       (setf sy.value content.scrollTop))))
 
 ;;;;;;
-;;; highlight
-
-(defun wui.highlight-mouse-enter-handler (event (element :by-id))
-  (dojo.addClass element "highlighted")
-  (let ((parent element.parent-node))
-    (while (not (= parent document))
-      (dojo.removeClass parent "highlighted")
-      (setf parent parent.parent-node)))
-  (dojo.stopEvent event))
-
-(defun wui.highlight-mouse-leave-handler (event (element :by-id))
-  (dojo.removeClass element "highlighted"))
-
-;;;;;
-;;; fields
-
-;; TODO rename to wui.primitive.*?
-(defun wui.field.setup-simple-checkbox (checkbox-id checked-tooltip unchecked-tooltip)
-  (bind ((checkbox (dojo.byId checkbox-id))
-         (hidden (dojo.byId (+ checkbox-id "_hidden"))))
-    (log.debug "Setting up simple checkbox " checkbox ", using hidden input " hidden)
-    (wui.connect checkbox "onchange"
-                 (lambda (event)
-                   (let ((enabled checkbox.checked))
-                     (log.debug "Propagating checkbox.checked of " checkbox " to the hidden field " hidden " named " hidden.name)
-                     (setf hidden.value (if enabled
-                                            "true"
-                                            "false"))
-                     (setf checkbox.title
-                           (if enabled
-                               checked-tooltip
-                               unchecked-tooltip)))))
-    (setf checkbox.wui-set-checked (lambda (enabled)
-                                     (if (= checkbox.checked enabled)
-                                         (return false)
-                                         (progn
-                                           (setf checkbox.checked enabled)
-                                           ;; we need to be in sync, so call onchange explicitly
-                                           (checkbox.onchange)
-                                           (return true)))))
-    (setf checkbox.wui-is-checked (lambda ()
-                                    (return checkbox.checked)))))
-
-(defun wui.field.setup-custom-checkbox (link-id checked-image unchecked-image checked-tooltip unchecked-tooltip checked-class unchecked-class)
-  (bind ((link (dojo.byId link-id))
-         (hidden (dojo.byId (+ link-id "_hidden"))))
-    (log.debug "Setting up custom checkbox " link ", using hidden input " hidden)
-    (bind ((image (aref (.get-elements-by-tag-name link "img") 0))
-           (enabled (not (= hidden.value "false"))))
-;; TODO:      (assert image)
-      (if (and checked-image
-               unchecked-image)
-          (setf image.src (if enabled
-                              checked-image
-                              unchecked-image)))
-      (setf link.className (if enabled
-                               checked-class
-                               unchecked-class))
-      (setf link.title (if enabled
-                           checked-tooltip
-                           unchecked-tooltip)))
-    (setf link.wui-set-checked (lambda (enabled)
-                                 (setf hidden.value (if enabled
-                                                        "true"
-                                                        "false"))
-                                 (if (and checked-image
-                                          unchecked-image)
-                                     (setf image.src (if enabled
-                                                         checked-image
-                                                         unchecked-image)))
-                                 (setf link.className (if enabled
-                                                          checked-class
-                                                          unchecked-class))
-                                 (setf link.title (if enabled
-                                                      checked-tooltip
-                                                      unchecked-tooltip))))
-    (setf link.wui-is-checked (lambda ()
-                                (return (not (= hidden.value "false")))))
-    (setf link.name hidden.name)        ; copy name of the form input
-    (setf link.onclick (lambda (event)
-                         (link.wui-set-checked (not (link.wui-is-checked)))))))
-
-(defun wui.field.update-popup-menu-select-field ((node :by-id) (field :by-id) value class)
-  (if class
-      (setf node.className class)
-      (setf node.innerHTML value))
-  (setf field.value value))
-
-(defun wui.field.update-use-in-filter ((field :by-id) value)
-  ;; TODO disable, or make transparent the other controls, too
-  (field.wui-set-checked value))
-
-(defun wui.field._setup-filter-field (widget-id use-in-filter-id)
-  ;; for now it's shared between a few fields...
-  (on-load
-   (bind ((widget (dijit.byId widget-id))
-          (listener (lambda ()
-                      (wui.field.update-use-in-filter use-in-filter-id (!= "" (.getValue this))))))
-     (assert widget)
-     ;; TODO why not wui.connect?
-     (widget.connect widget "onKeyUp" listener)
-     (widget.connect widget "onChange" listener))))
-
-(defun wui.field.setup-string-filter (widget-id use-in-filter-id)
-  (wui.field._setup-filter-field widget-id use-in-filter-id))
-
-(defun wui.field.setup-number-filter (widget-id use-in-filter-id)
-  (wui.field._setup-filter-field widget-id use-in-filter-id))
-
-;;;;;;
-;;; generic function
-
-(defun wui.create-generic-function (name)
-  (bind ((generic-function (create)))
-    (setf generic-function.name name)
-    (return generic-function)))
-
-(defun wui.register-generic-function-method (generic-function dispatch-type fn)
-  (setf (slot-value generic-function dispatch-type) fn))
-
-(defun wui.apply-generic-function (generic-function dispatch-type args)
-  (bind ((class-precedence-list (slot-value wui.component-class-precedence-lists dispatch-type)))
-    (assert class-precedence-list)
-    (dolist (class class-precedence-list)
-      (bind ((fn (slot-value generic-function class)))
-        (when fn
-          (return (fn.apply undefined args)))))))
-
-;;;;;;
-;;; setup component
-
-(setf wui.setup-component-generic-function (wui.create-generic-function))
-
-(defun wui.register-component-setup (type fn)
-  (wui.register-generic-function-method wui.setup-component-generic-function type fn))
-
-(defun wui.setup-component (id type &rest args &key &allow-other-keys)
-  (wui.apply-generic-function wui.setup-component-generic-function type (array id args)))
-
-;;;;;;
 ;;; i18n
 
-(setf wui.i18n.resources (create))
+(setf hdws.i18n.resources (create))
 
-(defun wui.i18n.localize (name)
-  (let ((value (aref wui.i18n.resources name)))
+(defun hdws.i18n.localize (name)
+  (let ((value (aref hdws.i18n.resources name)))
     (unless value
       (log.warn "Resource not found for key '" name "'")
       (setf value name))
     (return value)))
 
-(defun wui.i18n.process-resources (resources)
+(defun hdws.i18n.process-resources (resources)
   (log.debug "Received " resources.length " l10n resources")
   (do ((idx 0 (+ idx 2)))
       ((>= idx resources.length))
     (bind ((name (aref resources idx))
            (value (aref resources (1+ idx))))
-      (setf (aref wui.i18n.resources name) value))))
-
-;;;;;;
-;;; Context sensitive help
-
-(setf wui.help.popup-timeout 400)
-(setf wui.help.timer nil)
-
-(defun wui.help.decorate-url (url id)
-  (if (or (= id "")
-          (= id undefined))
-      (return url)
-      (return (wui.append-query-parameter url #.(escape-as-uri +context-sensitive-help-parameter-name+) id))))
-
-(defun wui.help.make-mouseover-handler (url)
-  (return
-    (lambda (event)
-      (clearTimeout wui.help.timer) ; safe to call with garbage
-      (setf wui.help.timer
-            (setTimeout (lambda ()
-                          (bind ((decorated-url url)
-                                 (node event.target)
-                                 (help wui.help.tooltip))
-                            (while (not (= node document))
-                              (setf decorated-url (wui.help.decorate-url decorated-url node.id))
-                              (setf node node.parent-node))
-                            (when (or (= help nil)
-                                      (and help.has-loaded
-                                           (not (= help.href decorated-url))))
-                              (wui.help.teardown)
-                              (setf help (new dojox.widget.DynamicTooltip
-                                              (create :connectId (array event.target)
-                                                      :position (array "below" "right")
-                                                      :href decorated-url)))
-                              (setf wui.help.tooltip help)
-                              (help.open event.target))))
-                        wui.help.popup-timeout))
-      (dojo.stopEvent event))))
-
-(defun wui.help.setup (event url)
-  (bind ((handles (array))
-         (aborter (lambda (event)
-                    (dojo.style document.body "cursor" "default")
-                    (foreach 'dojo.disconnect handles)
-                    (wui.help.teardown)
-                    (dojo.stopEvent event))))
-    (handles.push (wui.connect document "mouseover" (wui.help.make-mouseover-handler url)))
-    (handles.push (wui.connect document "click" aborter))
-    (handles.push (wui.connect document "keypress" (lambda (event)
-                                                     (when (= event.charOrCode dojo.keys.ESCAPE)
-                                                       (aborter event)))))
-    (dojo.style document.body "cursor" "help")
-    (dojo.stopEvent event)))
-
-(defun wui.help.teardown ()
-  (when wui.help.tooltip
-    (wui.help.tooltip.destroy)
-    (setf wui.help.tooltip nil)
-    (when wui.help.timer
-      (clearTimeout wui.help.timer)
-      (setf wui.help.timer nil))))
-
-;;;;;;
-;;; Border
-
-(defun wui.attach-border ((element :by-id) style-class element-name)
-  (if element
-      (bind ((parent-element element.parentNode)
-             (next-sibling element.nextSibling)
-             (table-element (create-dom-node "table")))
-        (if (or (not style-class)
-                (not element-name)
-                (and (not (= element-name true))
-                     (not (= element-name element.tagName))))
-            (return element))
-        (if (dojo.isArray style-class)
-            (dolist (one-class style-class)
-              (dojo.addClass table-element one-class))
-            (dojo.addClass table-element style-class))
-        (progn
-          ;; KLUDGE: we copy the id on the border not to confuse ajax what should be replaced
-          (setf table-element.id element.id)
-          (setf element.id ""))
-        (flet ((create-dummy-div ()
-                 (bind ((result (document.createElement "div")))
-                   (dojo.addClass result "decoration")
-                   (return result)))
-               (create-row (row-kind)
-                 (with-dom-nodes ((row-kind-element (+ "t" row-kind))
-                                  (row-element "tr")
-                                  (left-cell-element "td" :class "border-left")
-                                  (cell-element "td" :class "border-center")
-                                  (right-cell-element "td" :class "border-right"))
-                   (when (= row-kind "head")
-                     (dojo.place (create-dummy-div) left-cell-element "only")
-                     (dojo.place (create-dummy-div) right-cell-element "only"))
-                   (when (= row-kind "body")
-                     (dojo.place (create-dummy-div) left-cell-element "only")
-                     (dojo.place (create-dummy-div) right-cell-element "only"))
-                   (dojo.place row-kind-element table-element)
-                   (dojo.place row-element row-kind-element)
-                   (dojo.place left-cell-element row-element)
-                   (dojo.place cell-element row-element)
-                   (dojo.place right-cell-element row-element)
-                   (return cell-element))))
-          (create-row "head")
-          (bind ((cell-element (create-row "body")))
-            (create-row "foot")
-            (dojo.place element cell-element)
-            (if next-sibling
-                (dojo.place table-element next-sibling "before")
-                (dojo.place table-element parent-element)))))
-      (log.warn "Cannot attach border to element")))
+      (setf (aref hdws.i18n.resources name) value))))
 
 ;;;;;;
 ;;; End of story
 
-(log.debug "Finished evaluating wui.js")
+(log.debug "Finished evaluating main.js of hu.dwim.web-server")

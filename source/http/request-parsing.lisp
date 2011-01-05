@@ -179,7 +179,7 @@
       (cond
         ((or (string-equal "file" content-disposition)
              (not (null filename)))
-         (bind (((:values file file-name) (open-temporary-file :file-name-prefix "wui-upload-")))
+         (bind (((:values file file-name) (open-temporary-file :file-name-prefix "hdws-file-upload-")))
            (flet ((close-and-delete-temporary-file ()
                     (close file)
                     (delete-file file-name)))

@@ -103,7 +103,7 @@ em
 /* ajax */
 
 .reference.ajax-target {
-  background-image: url("/static/wui/image/miscellaneous/in-progress.gif");
+  background-image: url("/static/hdws/image/miscellaneous/in-progress.gif");
   background-repeat: no-repeat;
   background-position: left center;
   position: relative;
@@ -113,7 +113,7 @@ em
 }
 
 .ajax-request-in-progress {
-  background-image: url("/static/wui/image/miscellaneous/in-progress.gif");
+  background-image: url("/static/hdws/image/miscellaneous/in-progress.gif");
   background-repeat: no-repeat;
   background-position: center center;
   opacity: 0.5;

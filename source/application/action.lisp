@@ -178,7 +178,7 @@
           (bind ((serialized-arguments (serialize-action-arguments (nreverse *action-js-event-handlers*))))
             ;; keep it a simple `js not `js-onload so that we don't 'pollute' that array with another huge one
             `js(on-load
-                (wui.io.connect-action-event-handlers ,(make-string-quasi-quote nil serialized-arguments)))))))))
+                (hdws.io.connect-action-event-handlers ,(make-string-quasi-quote nil serialized-arguments)))))))))
 
 (def function render-action-js-event-handler (event-name id action &key action-arguments js subject-dom-node
                                                          (ajax (typep action 'action)) (stop-event #t)
@@ -188,7 +188,7 @@
   (check-type ajax boolean)
   (check-type subject-dom-node (or null string))
   (assert (or action js) () "~S needs either an action or a custom js" 'render-action-js-event-handler)
-  ;; TODO FIXME there used to be a (when (dojo.byId ,id) ...) wrapping around the wui.io.action call with the following comment:
+  ;; TODO FIXME there used to be a (when (dojo.byId ,id) ...) wrapping around the hdws.io.action call with the following comment:
   ;; KLUDGE: this condition prevents firing obsolete actions, they are not necessarily
   ;;         removed by destroy when simply replaced by some other content, this may leak memory on the cleint side
   ;; in the refactor it was deleted due to some headaches... reinstate if neccessary.
@@ -201,14 +201,15 @@
                    (uri    (print-uri-to-string action)))))
       ;; TODO the branches of this if should either be in two separate functions, or an assert should be added for ignored &key arguments in the true branch (ajax, send-client-state, subject-dom-node, sync)
       (if js
-          `js-onload(wui.io.connect-action-event-handler ,(etypecase id
-                                                            (cons   (make-array-form (mapcar #'make-constant-form id)))
-                                                            (string id))
-                                                         ,event-name
-                                                         (lambda (event connection)
-                                                           ,(apply js (when href (list href))))
-                                                         :one-shot ,one-shot
-                                                         :stop-event ,stop-event)
+          `js-onload(hdws.io.connect-action-event-handler
+                     ,(etypecase id
+                        (cons   (make-array-form (mapcar #'make-constant-form id)))
+                        (string id))
+                     ,event-name
+                     (lambda (event connection)
+                       ,(apply js (when href (list href))))
+                     :one-shot ,one-shot
+                     :stop-event ,stop-event)
           ;; we delay rendering standard event handlers and send them down in one go as a big array which is processed by the client js code.
           (progn
             (push (list id href subject-dom-node one-shot event-name ajax stop-event send-client-state sync)
@@ -224,7 +225,8 @@
                                                     free-variable-references)))
          (query-parameters (mapcar [unique-js-name (string-downcase !1)]
                                    variable-names)))
-    ` `js-inline(wui.io.xhr-post
+    ` `js-inline(hdws.io.xhr-post
+                 ;; TODO follow keywordification of xhr-post
                   (create
                    :content (create ,@(list ,@(iter (for variable-name :in variable-names)
                                                     (for query-parameter :in query-parameters)

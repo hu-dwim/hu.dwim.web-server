@@ -27,7 +27,7 @@ foom I think you will be RFCly correct if you split on slashes, then split on ;,
          :format-control message
          :format-arguments args))
 
-(def class* uri ()
+(def (class* e) uri ()
   ((scheme
     nil
     :type (or null string))
@@ -250,7 +250,7 @@ foom I think you will be RFCly correct if you split on slashes, then split on ;,
        :do (setf (aref result (char-code ok-char)) t))
     (coerce result '(simple-array boolean (256)))))
 
-(def function escape-as-uri (string)
+(def (function e) escape-as-uri (string)
   "Escapes all non alphanumeric characters in STRING following the URI convention. Returns a fresh string."
   (bind ((*print-pretty* #f)
          (*print-circle* #f))

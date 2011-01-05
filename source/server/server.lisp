@@ -6,7 +6,9 @@
 
 (in-package :hu.dwim.web-server)
 
-(def localization-loader-callback wui-server-localization-loader :hu.dwim.web-server "localization/server/" :log-discriminator "hu.dwim.web-server.server")
+(def localization-loader-callback localization-loader/hu.dwim.web-server.server
+  :hu.dwim.web-server "localization/server/"
+  :log-discriminator "hu.dwim.web-server.server")
 
 (def (class* e) request-counter-mixin ()
   ((processed-request-counter (make-atomic-counter) :accessor nil)))

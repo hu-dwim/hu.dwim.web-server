@@ -6,7 +6,9 @@
 
 (in-package :hu.dwim.web-server)
 
-(def localization-loader-callback wui-application-localization-loader :hu.dwim.web-server "localization/application/" :log-discriminator "hu.dwim.web-server.application")
+(def localization-loader-callback localization-loader/hu.dwim.web-server.application
+  :hu.dwim.web-server "localization/application/"
+  :log-discriminator "hu.dwim.web-server.application")
 
 (def (class* e) standard-application (application-with-login-support
                                       application-with-home-package
@@ -27,11 +29,11 @@
    (sessions-last-purged-at (get-monotonic-time) :type number)
    (maximum-sessions-count *maximum-sessions-per-application-count* :type integer)
    (session-id->session (make-hash-table :test 'equal) :type hash-table :export :accessor)
-   (administrator-email-address nil :type (or null string))
-   (lock (make-recursive-lock "hu.dwim.wui application lock"))
+   (administrator-email-address nil :type (or null string) :export :accessor)
+   (lock (make-recursive-lock "hu.dwim.web-server application lock"))
    (running-in-test-mode #f :type boolean :accessor running-in-test-mode? :export :accessor)
    (debug-client-side :type boolean :writer (setf debug-client-side?))
-   (ajax-enabled *default-ajax-enabled* :type boolean :accessor ajax-enabled?))
+   (ajax-enabled *default-ajax-enabled* :type boolean :accessor ajax-enabled? :export :accessor))
   (:default-initargs :path-prefix "/"))
 
 (def (function e) make-frame-root-component (&optional content)
@@ -121,7 +123,7 @@
 
 (def (constructor o) (application path-prefix)
   (assert path-prefix)
-  #*((:sbcl (setf (sb-thread:mutex-name (lock-of -self-)) (format nil "hu.dwim.wui application lock for application ~A" path-prefix)))))
+  #*((:sbcl (setf (sb-thread:mutex-name (lock-of -self-)) (format nil "hu.dwim.web-server application lock for application ~A" path-prefix)))))
 
 (def method session-class-of :around ((self application))
   (or (call-next-method)

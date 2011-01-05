@@ -131,13 +131,13 @@
          (setf ,DATA (get-first-child-with-tag-name ,DATA "ajax-response"))
          (unless ,DATA
            (log.warn "AJAX ajax-response node is nil, probably a malformed response, maybe a full page load due to an unregistered action id?")
-           (throw (new wui.communication-error "AJAX answer is empty")))
+           (throw (new hdws.communication-error "AJAX answer is empty")))
          (log.debug "Found ajax-response DOM node")
          (let ((,RESULT-NODE (get-first-child-with-tag-name ,DATA "result")))
            (if (or (not ,RESULT-NODE)
                    (not (= (dojo.string.trim (dojox.xml.parser.textContent ,RESULT-NODE))
                            "success")))
-               (let ((error-message (wui.i18n.localize "unknown-server-error")))
+               (let ((error-message (hdws.i18n.localize "unknown-server-error")))
                  (when-bind error-node (get-first-child-with-tag-name ,DATA "error-message")
                    (setf error-message (dojox.xml.parser.textContent error-node)))
                  (when error-message

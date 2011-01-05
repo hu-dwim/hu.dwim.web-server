@@ -185,7 +185,7 @@ See also the REQUEST-CONTENT-LENGTH-LIMIT slot of BASIC-BACKEND.")
                                                                 (subseq (string name) 0
                                                                         (1- (length (string name)))))
                                       ,value))
-                        (collect `(def constant ,name
+                        (collect `(def (constant e) ,name
                                       ,(format nil "~A ~A" value reason-phrase)))))))
   (x
     +http-continue+                        100 "Continue"

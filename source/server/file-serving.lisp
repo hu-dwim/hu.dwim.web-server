@@ -147,7 +147,7 @@
   (:method ((broker directory-serving-broker) (cache-entry directory-serving-broker/cache-entry)
             (absolute-file-path iolib.pathnames:file-path) (relative-path string) (root-directory iolib.pathnames:file-path) response-compression)
     (bind (((:slots bytes-to-respond last-used-at content-encoding file-write-date) cache-entry)
-           (compressed-file (iolib.pathnames:file-path (shadow-temporary-filename root-directory relative-path "wui-compressed-static-file-cache"))))
+           (compressed-file (iolib.pathnames:file-path (shadow-temporary-filename root-directory relative-path "hdws-compressed-static-file-cache"))))
       (files.debug "Updating compressed file cache for ~S, into compressed file ~S" absolute-file-path compressed-file)
       (setf bytes-to-respond compressed-file)
       (ensure-directories-exist (iolib.pathnames:file-path-namestring compressed-file))

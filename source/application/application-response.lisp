@@ -95,14 +95,14 @@
 (def method handle-toplevel-error/application/emit-response ((application application) (error serious-condition) (ajax-aware? (eql #t)))
   (app.debug "HANDLE-TOPLEVEL-ERROR/APPLICATION/EMIT-RESPONSE is sending an internal error response for the ajax aware request")
   (emit-response-for-ajax-aware-client ()
-    <script `js-inline(wui.inform-user-about-error "error.internal-server-error"
-                                                   :title "error.internal-server-error.title")>))
+    <script `js-inline(hdws.inform-user-about-error "error.internal-server-error"
+                                                    :title "error.internal-server-error.title")>))
 
 (def method handle-toplevel-error :before ((application application) (error serious-condition))
   (when (and (not *inside-user-code*)
              *session*)
-    ;; oops, this error comes from inside WUI or at least not from an action or from RENDER. let's try to invalidate the session if there's any...
-    (server.warn "Invalidating session ~A because an error came from inside WUI while processing a request coming to it" *session*)
+    ;; oops, looks like this error comes from inside the framework. let's try to invalidate the session...
+    (server.warn "Invalidating session ~A because an error came from inside the framework while processing a request coming to this session" *session*)
     (mark-session-invalid *session*)
     (setf *session* nil)
     (setf *frame* nil)))

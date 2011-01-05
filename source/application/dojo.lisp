@@ -99,7 +99,7 @@
         `xml,@(with-xhtml-body-environment (:wrappers '(js-script-collapser/wrapper))
                 `js(on-load
                     ;; using `js-onload here is a no go (ordering issue)
-                    (wui.io.instantiate-dojo-widgets (array ,@*dojo-widget-ids*))))))))
+                    (hdws.io.instantiate-dojo-widgets (array ,@*dojo-widget-ids*))))))))
 
 (def macro render-dojo-widget ((&optional (id '(generate-unique-string/frame "_w")))
                                 &body body)

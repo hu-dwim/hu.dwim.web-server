@@ -219,7 +219,7 @@
   (cond
     (*ajax-aware-request*
      (make-functional-response/ajax-aware-client ()
-       <script `js-inline(wui.inform-user-about-error "error.ajax.request-to-invalid-session")>))
+       <script `js-inline(hdws.inform-user-about-error "error.ajax.request-to-invalid-session")>))
     ((not *delayed-content-request*)
      (app.debug "Default HANDLE-REQUEST-TO-INVALID-SESSION is sending a redirect response to ~A" application)
      (make-redirect-response-for-current-application))
@@ -231,7 +231,7 @@
   (cond
     (*ajax-aware-request*
      (make-functional-response/ajax-aware-client ()
-       <script `js-inline(wui.inform-user-about-error "error.ajax.request-to-invalid-frame")>))
+       <script `js-inline(hdws.inform-user-about-error "error.ajax.request-to-invalid-frame")>))
     ((not *delayed-content-request*)
      (app.debug "Default HANDLE-REQUEST-TO-INVALID-FRAME is sending a redirect response to ~A" application)
      (make-redirect-response-for-current-application))
@@ -243,7 +243,7 @@
   (cond
     (*ajax-aware-request*
      (make-functional-response/ajax-aware-client ()
-       <script `js-inline(wui.inform-user-about-js-error)>))
+       <script `js-inline(hdws.inform-user-about-js-error)>))
     ((not *delayed-content-request*)
      (app.debug "Default HANDLE-REQUEST-TO-INVALID-ACTION is sending a redirect response to ~A" application)
      (make-redirect-response-for-current-application))

@@ -6,7 +6,7 @@
 
 (in-package :hu.dwim.web-server)
 
-(def (constant e) +js-i18n-broker/default-path+ "/wui/js/locale-specific.js")
+(def (constant e) +js-i18n-broker/default-path+ "/hdws/js/locale-specific.js")
 
 (def definer js-localization (locale &body resources)
   `(progn
@@ -59,7 +59,7 @@
                                 :content-type (content-type-for +javascript-mime-type+ :utf-8))))
 
 (def function serve-js-i18n-response ()
-  `js(wui.i18n.process-resources
+  `js(hdws.i18n.process-resources
       (array ,@(bind ((entries ()))
                  (do-namespace (js-i18n-resource-registry name)
                    (flet ((stringify (value)

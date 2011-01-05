@@ -71,11 +71,7 @@
 (def constant +frame-index-parameter-name+     "_x")
 (def constant +ajax-aware-parameter-name+      "_j")
 (def constant +delayed-content-parameter-name+ "_d")
-
-;; TODO: merge these into a single parameter and provide accessor functions?
-(def constant +shitf-key-parameter-name+       "_sk")
-(def constant +control-key-parameter-name+     "_ck")
-(def constant +alt-key-parameter-name+         "_ak")
+(def constant +modifier-keys-parameter-name+   "_m")
 
 (pushnew +ajax-aware-parameter-name+ *clone-request-uri/default-strip-query-parameters*)
 (pushnew +delayed-content-parameter-name+ *clone-request-uri/default-strip-query-parameters*)
@@ -85,13 +81,3 @@
                                                   +action-id-parameter-name+))
 
 (def constant +session-cookie-name+ "sid")
-
-;;;;;;
-;;; Stuff needed for applications and components
-
-(def (constant e) +scroll-x-parameter-name+ "_sx")
-(def (constant e) +scroll-y-parameter-name+ "_sy")
-(def (constant e) +no-javascript-error-parameter-name+ "_njs")
-
-(def (constant e) +page-failed-to-load-id+ "page-failed-to-load")
-(def (constant e) +page-failed-to-load-grace-period-in-millisecs+ 10000)

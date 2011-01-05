@@ -17,7 +17,7 @@
   ((identifier nil :type string)))
 
 (def (class* ea) login-data/identifier-and-password (login-data/identifier)
-  ((password nil :type password)))
+  ((password nil :type string)))
 
 (def print-object login-data/identifier-and-password
   (write-string "identifier: ")

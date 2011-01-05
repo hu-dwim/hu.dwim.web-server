@@ -125,7 +125,7 @@
 ;;;;;;
 ;;; Request
 
-(def (class* e) request (http-message)
+(def (class* eas) request (http-message)
   ((client-stream :type stream)
    (keep-alive :initform #t :type boolean :accessor keep-alive?)
    (http-method :type string)
@@ -554,7 +554,8 @@
   ;; nop
   )
 
-(def generic convert-to-primitive-response (response)
+(def (generic e) convert-to-primitive-response (response)
+  (:documentation "Called on all responses before trying to emit them, and it's supposed to return a PRIMITIVE-RESPONSE.")
   (:method :around (response)
     (bind ((*response* response))
       (call-next-method)))

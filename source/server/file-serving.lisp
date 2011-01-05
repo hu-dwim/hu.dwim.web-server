@@ -78,13 +78,14 @@
 
 (def generic make-file-serving-response-for-query-path (broker path-prefix relative-path root-directory)
   (:method ((broker directory-serving-broker) (path-prefix string) (relative-path string) (root-directory iolib.pathnames:file-path))
-    (assert (not (starts-with #\/ relative-path)))
     (bind ((absolute-file-path (if (zerop (length relative-path))
                                    root-directory
                                    (ignore-errors (iolib.os:resolve-file-path relative-path :defaults root-directory)))))
       (when (and absolute-file-path
                  (iolib.os:file-exists-p absolute-file-path))
-        (make-file-serving-response-for-directory-entry broker absolute-file-path path-prefix relative-path root-directory)))))
+        (make-file-serving-response-for-directory-entry broker absolute-file-path path-prefix relative-path root-directory))))
+  (:method :before (broker path-prefix relative-path root-directory)
+    (assert (not (starts-with #\/ relative-path)))))
 
 (def generic make-directory-serving-broker/cache-key (broker absolute-file-path content-encoding)
   (:method ((broker directory-serving-broker) (absolute-file-path iolib.pathnames:file-path) content-encoding)

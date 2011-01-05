@@ -22,7 +22,6 @@
 
 (def method make-file-serving-response-for-query-path ((broker js-directory-serving-broker) (path-prefix string) (relative-path string)
                                                        (root-directory iolib.pathnames:file-path))
-  (assert (not (starts-with #\/ relative-path)))
   (when (ends-with-subseq ".js" relative-path)
     (bind ((relative-path/lisp (string+ (subseq relative-path 0 (- (length relative-path) 2))
                                         "lisp"))

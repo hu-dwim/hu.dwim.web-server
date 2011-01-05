@@ -28,3 +28,6 @@
                                            (:file "session" :depends-on ("api"))
                                            (:file "session-logic" :depends-on ("session" "application"))
                                            (:file "variables")))))))
+
+(defmethod perform :before ((op develop-op) (system (eql (find-system :hu.dwim.web-server.application))))
+  (develop-system :hu.dwim.web-server))

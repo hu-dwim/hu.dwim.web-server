@@ -16,6 +16,7 @@
    (file-write-date)
    (bytes-to-respond)
    (content-encoding nil)
+   (content-type nil)
    (last-updated-at (get-monotonic-time))
    (last-used-at (get-monotonic-time))))
 
@@ -122,7 +123,7 @@
                                                   :file-path absolute-file-path
                                                   ;; this will force the recompilation below
                                                   :file-write-date most-negative-fixnum)))
-               (bind (((:slots bytes-to-respond last-used-at content-encoding file-write-date) cache-entry))
+               (bind (((:slots bytes-to-respond last-used-at content-encoding content-type file-write-date) cache-entry))
                  (if (<= file-write-date/on-disk file-write-date)
                      (files.debug "Found valid cached entry for ~A, in ~A" absolute-file-path broker)
                      (progn
@@ -141,6 +142,8 @@
                                     (response bytes-to-respond))))
                    (when content-encoding
                      (setf (header-value response +header/content-encoding+) content-encoding))
+                   (when content-type
+                     (setf (header-value response +header/content-type+) content-type))
                    response)))))))))
 
 (def generic update-directory-serving-broker/cache-entry (broker cache-entry absolute-file-path relative-path root-directory response-compression)

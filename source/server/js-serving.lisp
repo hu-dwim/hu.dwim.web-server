@@ -41,11 +41,12 @@
 (def method update-directory-serving-broker/cache-entry ((broker js-directory-serving-broker) (cache-entry directory-serving-broker/cache-entry)
                                                          (absolute-file-path iolib.pathnames:file-path) (relative-path string) (root-directory iolib.pathnames:file-path)
                                                          response-compression)
-  (bind (((:slots bytes-to-respond last-used-at content-encoding file-write-date) cache-entry))
+  (bind (((:slots bytes-to-respond last-used-at content-encoding content-type file-write-date) cache-entry))
     (files.debug "Compiling js file for the cache entry of ~A, in ~A" absolute-file-path broker)
     (setf bytes-to-respond (compile-js-file-to-byte-vector broker absolute-file-path :encoding :utf-8))
     (setf (values bytes-to-respond content-encoding)
           (compress-response/sequence bytes-to-respond :compression response-compression))
+    (setf content-type (content-type-for +javascript-mime-type+))
     (files.debug "Compiled and compressed js file for the cache entry of ~A, in ~A. Content encoding is ~S." absolute-file-path broker content-encoding)))
 
 (def generic compile-js-file-to-byte-vector (broker filename &key encoding)

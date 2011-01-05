@@ -69,22 +69,18 @@
         (app.debug "~A matched with *application-relative-path* ~S, querying entry-points for response" application *application-relative-path*)
         (assert (or (not *ajax-aware-request*)
                     *delayed-content-request*))
-        (if *delayed-content-request*
-            (progn
-              (app.debug "This is a *DELAYED-CONTENT-REQUEST*, handling appropriately")
-              (with-session-logic (:requires-valid-session #t)
-                (with-frame-logic (:requires-valid-frame #t)
-                  (with-action-logic ()
-                    (make-component-rendering-response/from-current-frame)))))
-            (bind ((response (query-brokers-for-response request (entry-points-of application) :otherwise nil)))
-              (when response
-                (unwind-protect
-                     (progn
-                       (app.debug "Calling SEND-RESPONSE for ~A while still inside the dynamic extent of the PRODUCE-RESPONSE method of application" response)
-                       (send-response response))
-                  (close-response response))
-                ;; TODO why not unwinding from here instead of make-do-nothing-response?
-                (make-do-nothing-response))))))))
+        (produce-response/application application request)))))
+
+(def method produce-response/application ((application application) request)
+  (bind ((response (query-brokers-for-response request (entry-points-of application) :otherwise nil)))
+    (when response
+      (unwind-protect
+           (progn
+             (app.debug "Calling SEND-RESPONSE for ~A while still inside the dynamic extent of the PRODUCE-RESPONSE method of application" response)
+             (send-response response))
+        (close-response response))
+      ;; TODO why not unwinding from here instead of make-do-nothing-response?
+      (make-do-nothing-response))))
 
 ;;;;;;
 ;;; Error handling

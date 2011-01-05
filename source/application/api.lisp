@@ -32,6 +32,9 @@ Custom implementations should look something like this:
 (def (generic e) make-frame-root-component-using-application (application session frame component)
   (:documentation "Should create a new FRAME/WIDGET component for APPLICATION with the provided COMPONENT as the main content."))
 
+(def (generic e) produce-response/application (application request)
+  (:documentation "Just like PRODUCE-RESPONSE, but only the inner part which is wrapped by the application related bookkeping."))
+
 (def (generic e) call-in-application-environment (application session thunk)
   (:documentation "Everything related to an application goes through this method, so it can be used to set up wrappers like WITH-TRANSACTION. The SESSION argument may or may not be a valid session.")
   (:method (application session thunk)

@@ -13,6 +13,6 @@
 ^docs/html
 ^docs/pdf
 ^logs/
-^www/dojo/.*
+^www/libraries/
 ^www/amCharts/examples
 ^www/.wui-cache

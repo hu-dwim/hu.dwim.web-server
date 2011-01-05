@@ -16,12 +16,12 @@
                :babel-streams
                :bordeaux-threads
                :cffi
-               :cl-fad
+               :cl-fad ; TODO replace with iolib
                :hu.dwim.common
                :hu.dwim.computed-class+hu.dwim.defclass-star
                :hu.dwim.def.namespace
                :hu.dwim.def+cl-l10n
-               :hu.dwim.def+contextl
+               :hu.dwim.def+contextl ; TODO no need for contextl here, factor out remaining dependencies
                :hu.dwim.def+hu.dwim.delico
                :hu.dwim.logger
                :hu.dwim.quasi-quote.xml+hu.dwim.quasi-quote.js

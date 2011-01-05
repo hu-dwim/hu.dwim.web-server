@@ -8,11 +8,15 @@
 
 (def (generic e) header-value (message header-name))
 (def (generic e) (setf header-value) (value message header-name))
-;; TODO: SEND-RESPONSE (or something similar) should be an exported API, but I was unable to convince ati
-;; TODO: currently there's no exported API to use a SERVER on its own without any BROKER
-(def generic send-response (response))
-(def generic close-response (response))
+
+(def generic send-response (response)
+  (:documentation "Emit RESPONSE into the http stream."))
+
+(def generic close-response (response)
+  (:documentation "This method is called when RESPONSE is no longer needed."))
+
 (def generic send-headers (response))
+
 (def generic close-request (request))
 
 (def class* http-message ()

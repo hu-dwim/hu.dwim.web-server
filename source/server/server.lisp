@@ -42,7 +42,7 @@
    (connection-multiplexer nil)
    (handler 'server/default-handler :type function-designator)
    (request-content-length-limit *request-content-length-limit* :type integer)
-   (lock (make-recursive-lock "WUI server lock"))
+   (lock (make-recursive-lock "hu.dwim.web-server server lock"))
    (shutdown-initiated #f :type boolean)
    (workers (make-adjustable-vector 16) :type sequence)
    (maximum-worker-count 16 :type integer :export :accessor)

@@ -90,6 +90,7 @@
   {with-preserved-readtable-case
     `(dojo.byId ,THING)})
 
+;; TODO this should probably be exported, but that causes package headaches...
 (def js-macro |defun| (name args &body body)
   (bind ((name-pieces (cl-ppcre:split "\\." (symbol-name name)))
          (arg-names (iter (for arg :in args)

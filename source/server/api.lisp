@@ -12,7 +12,7 @@
 (def (generic e) shutdown-server (server &key &allow-other-keys))
 
 (def (generic e) handle-request (thing request)
-  (:documentation "The protocol around which HTTP request handling is organized. Certain parts of WUI start out new protocol branches from this one (e.g. CALL-IF-MATCHES-REQUEST and PRODUCE-RESPONSE for brokers)."))
+  (:documentation "The toplevel protocol from which HTTP request handling starts out. Certain parts of the framework start out new protocol branches from this one (e.g. CALL-IF-MATCHES-REQUEST and PRODUCE-RESPONSE for brokers)."))
 
 (def (generic e) startup-broker (broker)
   (:method (broker)

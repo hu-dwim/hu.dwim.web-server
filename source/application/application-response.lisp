@@ -18,7 +18,7 @@
                       "")
                  :max-age (unless *session*
                             0)
-                 :comment "WUI session id"
+                 :comment "hu.dwim.web-server session id"
                  :domain (if (find #\. hostname)
                              (string+ "." hostname)
                              (progn

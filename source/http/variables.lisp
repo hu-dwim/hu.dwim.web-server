@@ -28,7 +28,7 @@
   "TRUE means that HTTP response will not be compressed, FALSE otherwise.")
 
 (def (special-variable e) *request-content-length-limit* #.(* 5 1024 1024)
-  "While uploading a file the size of the request may not go higher than this or WUI will signal an error.
+  "While uploading a file the size of the request may not go higher than this or the server will signal an error.
 See also the REQUEST-CONTENT-LENGTH-LIMIT slot of BASIC-BACKEND.")
 
 ;;;;;;

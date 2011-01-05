@@ -16,7 +16,7 @@
 (def (generic e) register-frame (application session frame))
 
 (def (generic e) purge-sessions (application)
-  (:documentation "Purge the web sessions of APPLICATION. Make sure you don't have any resources locked while calling this method! Especially dangerous to call this method from code invoked by WUI, because then you most probably have something locked already, e.g. the current SESSION object."))
+  (:documentation "Purge the web sessions of APPLICATION. Make sure you don't hold locks to any resources while calling this method! Especially dangerous to call this method from code invoked by hu.dwim.web-server, because then you most probably have something locked already, e.g. the current SESSION object."))
 (def (generic e) purge-frames (application session))
 
 (def (generic e) delete-session (application session))
@@ -110,7 +110,7 @@ In case of success it returns a valid web session (potentially a freshly created
   (:documentation "Make the necessary sideffects in the session to log it out. May signal an error."))
 
 (def (generic e) authenticate (application potentially-unregistered-web-session login-data)
-  (:documentation "Should return something non-NIL in case the authentication was successful. WUI treats the return value as a mere generalized boolean, but it also stores it in the AUTHENTICATE-RETURN-VALUE slot of the web session for later use by user code."))
+  (:documentation "Should return something non-NIL in case the authentication was successful. The framework treats the return value as a mere generalized boolean, but it also stores it in the AUTHENTICATE-RETURN-VALUE slot of the web session for later use by user code."))
 
 (def (generic e) is-logged-in? (session)
   (:documentation "Should return T if we are in an authenticated session opened by a succesful LOGIN call.")

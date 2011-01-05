@@ -103,6 +103,7 @@
                             (setf (client-timezone-of (context.session *context*)) +utc-zone+)))))) >
     `js-onload(setf (slot-value ($ ,id) 'value) (dojo.date.stamp.toISOString (new *date)))))
 
+;; TODO move to cl-l10n?
 (def special-variable *fallback-locale-for-functional-localizations* "en"
   "Used as a fallback locale if a functional localization can not be found and there's no *application* that would provide a default locale. It's not possible to use the usual name fallback strategy for functional localizations, so make sure that the default locale has a 100% coverage for them, otherwise it may effect the behavior of the application in certain situations.")
 

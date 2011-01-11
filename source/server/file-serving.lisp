@@ -272,7 +272,7 @@
                  ;; we ignore symlinks, because they should be resolved already at this point. if not, then it's a broken one.
                  (:symbolic-link)))))
      <table
-       <tr <td ,(render-url (string+ "/" path-prefix relative-path "../") "[parent directory]")>
+       <tr <td ,(render-url (string+ path-prefix relative-path "../") "[parent directory]")>
            <td>>
        ,(progn
           (iolib.os:walk-directory directory #'render-entry

@@ -338,6 +338,7 @@ foom I think you will be RFCly correct if you split on slashes, then split on ;,
       (declare (inline process)
                (dynamic-extent #'process))
       ;; call unescape-as-uri on each piece separately, so some of them may remain simple-base-string even if other pieces contain unicode
+      ;; FIXME path needs to be split before unescape, to avoid coalescing %2F into /
       (make-uri :scheme   (process 1)
                 :host     (process 3)
                 :port     (process 5)

@@ -66,6 +66,8 @@
          (path-prefix (path-prefix-of broker))
          (relative-path (remaining-path-of-request-uri request)))
     (server.debug "PRODUCE-RESPONSE for path-prefix ~S, relative-path ~S, root-directory ~A" path-prefix relative-path root-directory)
+    (check-type root-directory iolib.pathnames:file-path)
+    (assert (iolib.pathnames:absolute-file-path-p root-directory))
     (when (starts-with #\/ relative-path)
       ;; drop any leading /'s
       (setf relative-path (subseq relative-path (position #\/ relative-path :test-not #'char=))))
@@ -272,6 +274,7 @@
                  ;; we ignore symlinks, because they should be resolved already at this point. if not, then it's a broken one.
                  (:symbolic-link)))))
      <table
+       ;; FIXME this is plain wrong. use clone-request-uri and drop the last piece of path, but it needs a fix in parse-uri...
        <tr <td ,(render-url (string+ path-prefix relative-path "../") "[parent directory]")>
            <td>>
        ,(progn

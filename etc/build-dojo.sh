@@ -89,6 +89,7 @@ if [ ! -d "$DOJO_HOME" -o ! -d "$HDWS_HOME" ]; then
     echo Some of the paths are not correct!
     echo Hint:
     echo svn co http://svn.dojotoolkit.org/src/tags/release-1.5/ dojotoolkit-v1.5/
+    echo or
     echo svn co http://svn.dojotoolkit.org/src/trunk/ dojotoolkit/
     exit -1
 fi

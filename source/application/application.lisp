@@ -112,7 +112,7 @@
   (debug-only*
     (iter (for (nil session) :in-hashtable (session-id->session-of application))
           (assert (not (is-lock-held? (lock-of session))) ()
-                  "You are trying to lock the application ~A while one of its session ~A is already locked by you"
+                  "You are trying to lock the application ~A while one of its session ~A is already locked by you (broken ordering can cause deadlocks)"
                   application session)))
   (with-lock-held-on-thing ('application application)
     (-with-macro/body-)))

@@ -4,6 +4,8 @@
 ;;;
 ;;; See LICENCE for details.
 
+;; http://www.ietf.org/rfc/rfc3875
+
 (in-package :hu.dwim.web-server)
 
 (def (class* e) cgi-broker (broker-at-path-prefix)

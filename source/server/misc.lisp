@@ -15,8 +15,7 @@
          produce-response
          query-brokers-for-response
          iterate-brokers-for-response
-         make-file-serving-response-for-query-path
-         make-file-serving-response-for-directory-entry
+         produce-response/directory-serving
          handle-cgi-request
          ))
 

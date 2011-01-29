@@ -31,6 +31,7 @@
 
 (def entry-point (*parameter-application* :path "")
   (with-request-parameters ((number "0" number?) ((the-answer "theanswer") "not supplied" the-answer?))
+    (declare (ignore number the-answer))
     (make-raw-functional-response ()
       (emit-http-response/simple-html-document (:title "foo")
         <p "Parameters:"

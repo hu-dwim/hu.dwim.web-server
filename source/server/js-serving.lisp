@@ -20,19 +20,14 @@
                  :root-directory root-directory
                  :priority priority))
 
-(def method make-file-serving-response-for-query-path ((broker js-directory-serving-broker) (path-prefix string) (relative-path string)
-                                                       (root-directory iolib.pathnames:file-path))
-  (when (ends-with-subseq ".js" relative-path)
-    (bind ((relative-path/lisp (string+ (subseq relative-path 0 (- (length relative-path) 2))
-                                        "lisp"))
-           (absolute-file-path (ignore-errors
-                                 (iolib.os:resolve-file-path relative-path/lisp :defaults root-directory)))
-           ((:values exists? kind) (when absolute-file-path
-                                     (iolib.os:file-exists-p absolute-file-path))))
-      (files.dribble "Looking for file ~A, absolute-file-path ~A, exists? ~S, kind ~S, in ~A" relative-path absolute-file-path exists? kind broker)
-      (when (and exists?
-                 (not (eq kind :directory)))
-        (make-file-serving-response-for-directory-entry broker absolute-file-path path-prefix relative-path root-directory)))))
+(def method directory-serving/resolve-uri-to-absolute-file-path ((broker js-directory-serving-broker) (path-prefix string) (relative-path string)
+                                                                 (root-directory iolib.pathnames:file-path))
+  (bind ((suffix "js"))
+    (when (ends-with-subseq suffix relative-path)
+      (bind ((relative-path/lisp (string+ (subseq relative-path 0 (- (length relative-path) (length suffix)))
+                                          "lisp")))
+        (ignore-errors
+          (iolib.os:resolve-file-path relative-path/lisp :defaults root-directory))))))
 
 (def method make-directory-serving-broker/cache-key ((broker js-directory-serving-broker) (absolute-file-path iolib.pathnames:file-path) content-encoding)
   (list (iolib.pathnames:file-path-namestring absolute-file-path) content-encoding *debug-client-side*))

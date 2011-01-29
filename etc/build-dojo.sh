@@ -98,4 +98,4 @@ echo Starting the dojo build script now...
 echo
 
 cd "${DOJO_HOME}/util/buildscripts"
-sh ./build.sh action="clean,release" profileFile="$DOJO_PROFILE" releaseDir=${DOJO_RELEASE_DIR} releaseName=dojotoolkit-${DOJO_RELEASE_NAME} copyTests=false layerOptimize=shrinksafe.keepLines localeList=${LOCALE_LIST}
+sh ./build.sh action="clean,release" version="${DOJO_RELEASE_NAME}" profileFile="$DOJO_PROFILE" releaseDir="${DOJO_RELEASE_DIR}" releaseName="dojotoolkit-${DOJO_RELEASE_NAME}" copyTests=false layerOptimize=shrinksafe.keepLines localeList="${LOCALE_LIST}"

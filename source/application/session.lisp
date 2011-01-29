@@ -81,20 +81,8 @@
     (t (values #t))))
 
 (def (with-macro* e) with-lock-held-on-session (session &key deadline)
-  (multiple-value-prog1
-      (flet ((body ()
-               (with-recursive-lock-held ((lock-of session))
-                 (threads.dribble "Entered with-lock-held-on-session for ~S in thread ~S" session (current-thread))
-                 (-with-macro/body-))))
-        (threads.dribble "Entering with-lock-held-on-session for ~S in thread ~S, deadline is ~S" session (current-thread) deadline)
-        (if deadline
-            (handler-case
-                (with-deadline (deadline)
-                  (body))
-              (deadline-timeout ()
-                (threads.warn "WITH-LOCK-HELD-ON-SESSION had a deadline and it timed out. Skipping the rest of the body..." session deadline)))
-            (body)))
-    (threads.dribble "Leaving with-lock-held-on-session for ~S in thread ~S" session (current-thread))))
+  (with-lock-held-on-thing ('session session :deadline deadline)
+    (-with-macro/body-)))
 
 (def method (setf id-of) :before (id (session session))
   (awhen (id-of session)

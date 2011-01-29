@@ -92,12 +92,8 @@
   (not (null (started-at-of server))))
 
 (def (with-macro* e) with-lock-held-on-server (server)
-  (multiple-value-prog1
-      (progn
-        (threads.dribble "Entering with-lock-held-on-server for server ~S in thread ~S" server (current-thread))
-        (with-recursive-lock-held ((lock-of server))
-          (-body-)))
-    (threads.dribble "Leaving with-lock-held-on-server for server ~S in thread ~S" server (current-thread))))
+  (with-lock-held-on-thing ('server server)
+    (-with-macro/body-)))
 
 (def method startup-server ((server server) &rest args &key &allow-other-keys)
   (server.debug "STARTUP-SERVER of ~A" server)

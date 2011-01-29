@@ -11,12 +11,8 @@
    (condition-variable (make-condition-variable))))
 
 (def with-macro with-lock-held-on-timer (timer)
-  (multiple-value-prog1
-      (progn
-        (threads.dribble "Entering with-lock-held-on-timer for timer ~S in thread ~S" timer (current-thread))
-        (with-recursive-lock-held ((lock-of timer))
-          (-body-)))
-    (threads.dribble "Leaving with-lock-held-on-timer for timer ~S in thread ~S" timer (current-thread))))
+  (with-lock-held-on-thing ('timer timer)
+    (-with-macro/body-)))
 
 (def function drive-timer (timer)
   "This is the entry point of the timer. There should be one and only one thread calling this function for each timer."

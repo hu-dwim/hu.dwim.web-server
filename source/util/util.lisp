@@ -95,6 +95,22 @@
     (setf (gethash key hash-table) value)
     (values key value)))
 
+(def with-macro* with-lock-held-on-thing (name-for-log thing &key (lock-accessor-fn 'lock-of) deadline)
+  (multiple-value-prog1
+      (flet ((body ()
+               (bordeaux-threads:with-recursive-lock-held ((funcall lock-accessor-fn thing))
+                 (threads.dribble "Entered WITH-LOCK-HELD-ON-~A for ~S in thread ~S" name-for-log thing (current-thread))
+                 (-with-macro/body-))))
+        (threads.dribble "Entering WITH-LOCK-HELD-ON-~A for ~S in thread ~S, deadline is ~S" name-for-log thing (current-thread) deadline)
+        (if deadline
+            (handler-case
+                (with-deadline (deadline)
+                  (body))
+              (deadline-timeout ()
+                (threads.warn "WITH-LOCK-HELD-ON-~A on ~S had a deadline (~S s) and it timed out. Skipping the rest of the body..." name-for-log thing deadline)))
+            (body)))
+    (threads.dribble "Leaving WITH-LOCK-HELD-ON-~A for ~S in thread ~S" name-for-log thing (current-thread))))
+
 ;;;;;;
 ;;; Debug on error
 

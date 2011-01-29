@@ -114,12 +114,8 @@
           (assert (not (is-lock-held? (lock-of session))) ()
                   "You are trying to lock the application ~A while one of its session ~A is already locked by you"
                   application session)))
-  (multiple-value-prog1
-      (progn
-        (threads.dribble "Entering with-lock-held-on-application for app ~S in thread ~S" application (current-thread))
-        (with-recursive-lock-held ((lock-of application))
-          (-body-)))
-    (threads.dribble "Leaving with-lock-held-on-application for app ~S in thread ~S" application (current-thread))))
+  (with-lock-held-on-thing ('application application)
+    (-with-macro/body-)))
 
 (def (constructor o) (application path-prefix)
   (assert path-prefix)

@@ -65,7 +65,7 @@
                               :depends-on ("http")
                               :components ((:file "api" :depends-on ("conditions"))
                                            (:file "brokers" :depends-on ("server"))
-                                           (:file "cgi" :depends-on ("brokers"))
+                                           (:file "cgi" :depends-on ("brokers" "file-serving"))
                                            (:file "conditions")
                                            (:file "file-serving" :depends-on ("variables"))
                                            (:file "js-serving" :depends-on ("js-util" "file-serving"))

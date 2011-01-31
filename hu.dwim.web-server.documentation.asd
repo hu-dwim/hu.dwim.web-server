@@ -10,7 +10,8 @@
 
 (defsystem :hu.dwim.web-server.documentation
   :class hu.dwim.documentation-system
-  :depends-on (:hu.dwim.web-server.test)
+  :depends-on (:hu.dwim.presentation
+               :hu.dwim.web-server.test)
   :components ((:module "documentation"
                 :components ((:file "package")
                              (:file "web-server" :depends-on ("package"))))))

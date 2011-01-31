@@ -12,6 +12,7 @@
         :hu.dwim.def
         :hu.dwim.defclass-star
         :hu.dwim.syntax-sugar
+        :hu.dwim.presentation
         :hu.dwim.util
         :hu.dwim.web-server)
   (:readtable-setup (setup-readtable/same-as-package :hu.dwim.web-server)))

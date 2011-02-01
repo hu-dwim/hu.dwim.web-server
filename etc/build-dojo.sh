@@ -49,11 +49,6 @@ while true ; do
 	esac
 done
 
-if [ -z "${DOJO_RELEASE_NAME}" ]; then
-  DOJO_RELEASE_NAME=`cd $DOJO_HOME; svn info | grep URL: | awk -F '/' '{print $NF}'`
-  DOJO_RELEASE_NAME=${DOJO_RELEASE_NAME}-`cd $DOJO_HOME; svn info | grep Revision: | awk '{print $2}'`
-fi
-
 if [ -z "${HDWS_HOME}" ]; then
   HDWS_HOME="`dirname $0`/.."
 fi
@@ -66,16 +61,21 @@ if [ -z "${DOJO_HOME}" ]; then
   DOJO_HOME="`dirname $0`/../../dojotoolkit"
 fi
 
+HDWS_HOME=`absolutize "$HDWS_HOME"`
+DOJO_HOME=`absolutize "$DOJO_HOME"`
+DOJO_RELEASE_DIR=`absolutize "$DOJO_RELEASE_DIR"`
+
 if [ -z "${DOJO_PROFILE}" ]; then
   DOJO_PROFILE="${HDWS_HOME}/etc/dojo-build-profile.js"
 fi
 
+if [ -z "${DOJO_RELEASE_NAME}" ]; then
+  DOJO_RELEASE_NAME=`cd $DOJO_HOME; svn info | grep URL: | awk -F '/' '{print $NF}'`
+  DOJO_RELEASE_NAME=${DOJO_RELEASE_NAME}-`cd $DOJO_HOME; svn info | grep Revision: | awk '{print $2}'`
+fi
+
 #echo "Remaining arguments:"
 #for arg do echo '--> '"\`$arg'" ; done
-
-HDWS_HOME=`absolutize "$HDWS_HOME"`
-DOJO_HOME=`absolutize "$DOJO_HOME"`
-DOJO_RELEASE_DIR=`absolutize "$DOJO_RELEASE_DIR"`
 
 echo "Will build dojo into ${DOJO_RELEASE_DIR} now..."
 echo "Assuming the following parameters:"

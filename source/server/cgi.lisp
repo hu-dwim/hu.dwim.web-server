@@ -154,8 +154,10 @@
 
 (def (function ed) handle-cgi-request (cgi-command-line script-path &key extra-path www-root environment)
   (flet ((delete-file-if-exists (pathspec)
-           (when (iolib.os:file-exists-p pathspec)
-             (iolib.os:delete-files pathspec)))
+           (handler-case
+               (iolib.os:delete-files pathspec)
+             (iolib.syscalls:enoent ()
+               (values))))
          (file-length* (pathspec)
            (isys:stat-size (isys:stat (iolib.pathnames:file-path-namestring pathspec)))))
     (bind ((stdout/file (temporary-file-path "hdws-cgi-stdout"))
@@ -170,12 +172,16 @@
                                                  :external-format :utf-8)))
           (unwind-protect-case ()
               (bind ((exit-code (iolib.os:process-status process :wait #t))
-                     #+nil
-                     (stderr (with-output-to-string (str)
-                               (copy-stream (iolib.os:process-stderr process) str))))
-                (cgi.dribble "Standard output is ~S long, stderr is ~S long" (file-length* stdout/file) (file-length* stderr/file))
+                     (stderr/length (file-length* stderr/file)))
+                (cgi.debug "Standard output is ~S long, stderr is ~S long" (file-length* stdout/file) stderr/length)
                 (unless (zerop exit-code)
-                  (cgi.error (build-error-log-message :message (format nil "CGI command ~S returned with exit code ~S" cgi-command-line exit-code)
+                  (cgi.error (build-error-log-message :message (format nil "CGI command ~S returned with exit code ~S.~:[~:;~%Error output:~%~S~]"
+                                                                       cgi-command-line exit-code
+                                                                       (not (zerop stderr/length))
+                                                                       ;; TODO add :count limit to READ-FILE-INTO-STRING
+                                                                       (subseq-if-longer 1024 (read-file-into-string
+                                                                                               (iolib.pathnames:file-path-namestring stderr/file))
+                                                                                         :postfix "[...]"))
                                                       :include-backtrace #f)))
                 (aprog1
                     (make-raw-functional-response ()

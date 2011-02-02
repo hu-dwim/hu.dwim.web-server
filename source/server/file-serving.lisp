@@ -264,7 +264,10 @@
          (body (with-output-to-sequence (*xml-stream* :external-format (external-format-of self)
                                                       :initial-buffer-size 256)
                  (emit-html-document (:content-type +html-content-type+ :title title)
-                   (render-directory-as-html (directory-of self) (path-prefix-of self) (relative-path-of self))))))
+                   (handler-case
+                       (render-directory-as-html (directory-of self) (path-prefix-of self) (relative-path-of self))
+                     (iolib.syscalls:eacces ()
+                       (access-denied-error)))))))
     (make-byte-vector-response* body
                                 :headers (headers-of self)
                                 :cookies (cookies-of self))))

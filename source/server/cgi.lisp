@@ -24,6 +24,11 @@
     nil
     :type (or null function-designator)
     :documentation "Will be invoked with the IOLIB.PATHNAMES:FILE-PATH of the CGI executable, and must produce a list of strings passed on to IOLIB.OS:RUN-PROGRAM.")
+   (redirect-for-trailing-slash
+    #f
+    :type boolean
+    :accessor redirect-for-trailing-slash?
+    :documentation "Some CGI scripts (e.g. mailman) use relative links, so executing them from example.com/mailman/admin will render a ../create link, which will be broken without a trailing slash for the admin url. Enabling this option will redirect to an url with a trailing slash if it's not there already.")
    (www-root
     nil
     :type (or null iolib.pathnames:file-path-designator)
@@ -81,7 +86,10 @@
     (bind (((:values cgi-file-name extra-path) (aif (position #\/ relative-path)
                                                     (values (subseq relative-path 0 it)
                                                             (subseq relative-path it))
-                                                    (values relative-path nil)))
+                                                    (if (redirect-for-trailing-slash? broker)
+                                                        (return-from produce-response/directory-serving
+                                                          (make-redirect-response (clone-request-uri :append-to-path "/")))
+                                                        (values relative-path "/"))))
            (cgi-file (iolib.pathnames:merge-file-paths cgi-file-name root-directory))
            (exists? (iolib.os:file-exists-p cgi-file))
            (follow-symlinks? (allow-access-to-external-files? broker))
@@ -134,6 +142,7 @@
       (set "PATH_INFO"       extra-path)
       (set "QUERY_STRING"    (query-of request-uri))
       (set "REMOTE_ADDR"     *request-remote-address/string*)
+      (set "REQUEST_URI"     (raw-uri-of *request*))
       (set "REQUEST_METHOD"  (http-method-of *request*))
       (set "SCRIPT_NAME"     script-path)
       (set "SERVER_NAME"     (host-of request-uri))
@@ -159,12 +168,21 @@
              (iolib.syscalls:enoent ()
                (values))))
          (file-length* (pathspec)
-           (isys:stat-size (isys:stat (iolib.pathnames:file-path-namestring pathspec)))))
+           (isys:stat-size (isys:stat (iolib.pathnames:file-path-namestring pathspec))))
+         (print-environment-to-string (env)
+           (with-output-to-string (*standard-output*)
+             (maphash (lambda (name value)
+                        (princ name)
+                        (write-string "=")
+                        (princ value)
+                        (terpri))
+                      (iolib.os::environment-variables env)))))
+    (declare (ignorable #'print-environment-to-string))
     (bind ((stdout/file (temporary-file-path "hdws-cgi-stdout"))
            (stderr/file (temporary-file-path "hdws-cgi-stderr")))
-      (cgi.debug "Executing CGI file ~S, matched on script-path ~S" cgi-command-line script-path)
+      (cgi.dribble "Executing CGI file ~S, matched on script-path ~S" cgi-command-line script-path)
       (bind ((final-environment (compute-cgi-environment environment script-path :extra-path extra-path :www-root www-root)))
-        (cgi.dribble "Executing CGI file matched on script-path ~S, temporary file will be ~S.~% * Command line: ~S~% * Input environment:~%     ~S~% * Final environment:~%     ~S. " script-path stdout/file cgi-command-line environment final-environment)
+        (cgi.debug "Executing CGI file matched on script-path ~S, temporary file will be ~S.~% * Command line: ~S~% * Input environment:~%     ~S~% * Final environment:~%     ~S. " script-path stdout/file cgi-command-line environment (print-environment-to-string final-environment))
         (bind ((process (iolib.os:create-process cgi-command-line
                                                  :stdout stdout/file
                                                  :stderr stderr/file

@@ -90,6 +90,8 @@
     id-of
 
     action
+    unique-counter
+    unique-counter-of
 
     default-locale-of
     decorate-session-cookie

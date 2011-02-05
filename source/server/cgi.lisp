@@ -161,7 +161,7 @@
       )
     environment))
 
-(def (function ed) handle-cgi-request (cgi-command-line script-path &key extra-path www-root environment)
+(def (function ed) handle-cgi-request (cgi-command-line script-path &key extra-path www-root environment (timeout 30))
   (flet ((delete-file-if-exists (pathspec)
            (handler-case
                (iolib.os:delete-files pathspec)
@@ -180,40 +180,62 @@
     (declare (ignorable #'print-environment-to-string))
     (bind ((stdout/file (temporary-file-path "hdws-cgi-stdout"))
            (stderr/file (temporary-file-path "hdws-cgi-stderr")))
-      (cgi.dribble "Executing CGI file ~S, matched on script-path ~S" cgi-command-line script-path)
+      (cgi.dribble "Executing CGI file ~S, matched on script-path ~S, with timeout ~S" cgi-command-line script-path timeout)
       (bind ((final-environment (compute-cgi-environment environment script-path :extra-path extra-path :www-root www-root)))
-        (cgi.debug "Executing CGI file matched on script-path ~S, temporary file will be ~S.~% * Command line: ~S~% * Input environment:~%     ~S~% * Final environment:~%     ~S. " script-path stdout/file cgi-command-line environment (print-environment-to-string final-environment))
+        (cgi.debug "Executing CGI file matched on script-path ~S, temporary file will be ~S, with timeout ~S.~% * Command line: ~S~% * Input environment:~%     ~S~% * Final environment:~%     ~S. " script-path stdout/file timeout cgi-command-line environment (print-environment-to-string final-environment))
         (bind ((process (iolib.os:create-process cgi-command-line
-                                                 :stdin (client-stream-fd-of *request*)
+                                                 :stdin (iolib.streams:fd-of (client-stream-of *request*)) ; pass down a non-blocking fd (can't find anything about it in the standard though)
                                                  :stdout stdout/file
                                                  :stderr stderr/file
                                                  :environment final-environment
-                                                 :external-format :utf-8)))
+                                                 :external-format :utf-8))
+               (cleanup-thunk (lambda ()
+                                (delete-file-if-exists stdout/file)
+                                (delete-file-if-exists stderr/file))))
           (unwind-protect-case ()
-              (bind ((exit-code (iolib.os:process-status process :wait #t))
+              (bind ((exit-code nil)
                      (stderr/length (file-length* stderr/file)))
+                (if timeout
+                    (iter
+                      (with start-time = (get-monotonic-time))
+                      (with deadline = (+ start-time timeout))
+                      (until (numberp exit-code))
+                      (setf exit-code (iolib.os:process-status process :wait #f))
+                      (when (> (get-monotonic-time) deadline)
+                        (cgi.error "Timeout on CGI file ~S after ~S sec, killing the child process." script-path timeout)
+                        (iolib.os:process-kill process iolib.syscalls:sigkill)
+                        (return))
+                      ;; KLUDGE should not busy wait... but it needs iolib feature.
+                      (sleep 0.1))
+                    (setf exit-code (iolib.os:process-status process :wait #t)))
                 (cgi.debug "Standard output is ~S long, stderr is ~S long" (file-length* stdout/file) stderr/length)
-                (unless (zerop exit-code)
-                  (cgi.error (build-error-log-message :message (format nil "CGI command ~S returned with exit code ~S.~:[~:;~%Error output:~%~S~]"
-                                                                       cgi-command-line exit-code
-                                                                       (not (zerop stderr/length))
-                                                                       ;; TODO add :count limit to READ-FILE-INTO-STRING
-                                                                       (subseq-if-longer 1024 (read-file-into-string
-                                                                                               (iolib.pathnames:file-path-namestring stderr/file))
-                                                                                         :postfix "[...]"))
-                                                      :include-backtrace #f)))
-                (aprog1
-                    (make-raw-functional-response ()
-                      (bind ((stream (client-stream-of *request*)))
-                        (write-sequence #.(string-to-us-ascii-octets "HTTP/1.1 ") stream)
-                        (write-sequence (string-to-us-ascii-octets "200 OK") stream)
-                        (write-byte +space+ stream)
-                        ;; TODO do it smarter than this... copystream it or sendfile it.
-                        (bind ((contents (read-file-into-byte-vector (iolib.pathnames:file-path-namestring stdout/file))))
-                          (cgi.debug "Emitting ~S bytes of response generated by CGI command ~S into temp file ~S" (length contents) cgi-command-line stdout/file)
-                          (write-sequence contents stream))))
-                  (setf (cleanup-thunk-of it) (lambda ()
-                                                (delete-file-if-exists stdout/file)))))
+                (if (eql exit-code 0)
+                    (aprog1
+                        (make-raw-functional-response ()
+                          (bind ((stream (client-stream-of *request*)))
+                            (write-sequence #.(string-to-us-ascii-octets "HTTP/1.1 ") stream)
+                            (write-sequence (string-to-us-ascii-octets "200 OK") stream)
+                            (write-byte +space+ stream)
+                            ;; TODO do it smarter than this... copystream it or sendfile it.
+                            (bind ((contents (read-file-into-byte-vector (iolib.pathnames:file-path-namestring stdout/file))))
+                              (cgi.debug "Emitting ~S bytes of response generated by CGI command ~S into temp file ~S" (length contents) cgi-command-line stdout/file)
+                              (write-sequence contents stream))))
+                      (setf (cleanup-thunk-of it) cleanup-thunk)
+                      (setf cleanup-thunk nil))
+                    (progn
+                      (when exit-code
+                        (cgi.error (build-error-log-message :message (format nil "CGI command ~S returned with exit code ~S.~:[~:;~%Error output:~%~S~]"
+                                                                             cgi-command-line exit-code
+                                                                             (not (zerop stderr/length))
+                                                                             ;; TODO add :count limit to READ-FILE-INTO-STRING
+                                                                             (subseq-if-longer 1024 (read-file-into-string
+                                                                                                     (iolib.pathnames:file-path-namestring stderr/file))
+                                                                                               :postfix "[...]"))
+                                                            :include-backtrace #f)))
+                      (make-raw-functional-response ()
+                        (emit-http-response/internal-server-error)))))
+            (:always
+             (close process))
             (:abort
-             (delete-file-if-exists stdout/file)
-             (delete-file-if-exists stderr/file))))))))
+             (awhen cleanup-thunk
+               (funcall it)))))))))

@@ -225,6 +225,9 @@ If the request contains a param (no distinction between GET and POST params is m
           (finally (return `(bind ,bindings
                               ,@body))))))
 
+;;;;;;
+;;; Cookies
+
 (def (function eio) make-cookie (name value &key comment domain max-age path secure)
   (rfc2109:make-cookie
    :name name

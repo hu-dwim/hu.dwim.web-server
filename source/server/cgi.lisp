@@ -184,6 +184,7 @@
       (bind ((final-environment (compute-cgi-environment environment script-path :extra-path extra-path :www-root www-root)))
         (cgi.debug "Executing CGI file matched on script-path ~S, temporary file will be ~S.~% * Command line: ~S~% * Input environment:~%     ~S~% * Final environment:~%     ~S. " script-path stdout/file cgi-command-line environment (print-environment-to-string final-environment))
         (bind ((process (iolib.os:create-process cgi-command-line
+                                                 :stdin (client-stream-fd-of *request*)
                                                  :stdout stdout/file
                                                  :stderr stderr/file
                                                  :environment final-environment

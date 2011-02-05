@@ -27,9 +27,11 @@
 (def (special-variable e) *disable-response-compression* #f
   "TRUE means that HTTP response will not be compressed, FALSE otherwise.")
 
-(def (special-variable e) *request-content-length-limit* #.(* 5 1024 1024)
-  "While uploading a file the size of the request may not go higher than this or the server will signal an error.
-See also the REQUEST-CONTENT-LENGTH-LIMIT slot of BASIC-BACKEND.")
+(def (special-variable e) *length-limit/http-request-head* (* 64 1024)
+  "If the size of the head part of the HTTP request goes beyond this limit, then the parsing code will signal an error.")
+
+(def (special-variable e) *length-limit/http-request-body* (* 5 1024 1024)
+  "If the size of the body part of the HTTP request goes beyond this limit, then the parsing code will signal an error.")
 
 ;;;;;;
 ;;; Some DOS related limits
@@ -175,6 +177,8 @@ See also the REQUEST-CONTENT-LENGTH-LIMIT slot of BASIC-BACKEND.")
 (def constant +colon+           #.(char-code #\:))
 (def constant +linefeed+        10)
 (def constant +carriage-return+ 13)
+
+(def constant +valid-http-methods+ (mapcar [coerce !1 'simple-string] '("GET" "HEAD" "POST" "PUT" "DELETE" "OPTIONS" "TRACE" "CONNECT")))
 
 (macrolet ((x (&body defs)
              `(progn

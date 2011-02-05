@@ -116,6 +116,9 @@
 (def (with-macro* eo) with-action-logic (&key requires-valid-action)
   (app.debug "WITH-ACTION-LOGIC speaking")
   (assert (and *application* *session* *frame*) () "May not use WITH-ACTION-LOGIC without a proper application/session/frame dynamic environment")
+  ;; let's guarantee that the request body is fully parsed inside WITH-ACTION-LOGIC
+  (ensure-http-request-body-is-parsed *request* :length-limit (or (length-limit/http-request-body-of *server*)
+                                                                  *length-limit/http-request-body*))
   (bind ((application *application*)
          (session *session*)
          (frame *frame*))

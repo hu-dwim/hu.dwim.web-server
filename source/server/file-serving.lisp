@@ -68,7 +68,7 @@
                  :root-directory root-directory
                  :priority priority))
 
-(def method produce-response ((broker directory-serving-broker) (request request))
+(def method produce-response ((broker directory-serving-broker) (request http-request))
   (bind ((root-directory (root-directory-of broker))
          (path-prefix (path-prefix-of broker))
          (relative-path (remaining-path-of-request-uri request)))
@@ -206,7 +206,7 @@
 ;;;;;;
 ;;; File serving response
 
-(def class* file-serving-response (response)
+(def class* file-serving-response (primitive-http-response)
   ((file-path
     :unbound
     :type iolib.pathnames:file-path)
@@ -239,8 +239,6 @@
   (when (delete-file-when-finished? self)
     (iolib.os:delete-files (file-path-of self))))
 
-(def method convert-to-primitive-response ((response file-serving-response))
-  response)
 
 ;;;;;;
 ;;; Directory index

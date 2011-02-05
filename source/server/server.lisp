@@ -41,7 +41,8 @@
    (listen-entries nil :type list)
    (connection-multiplexer nil)
    (handler 'server/default-handler :type function-designator)
-   (request-content-length-limit *request-content-length-limit* :type integer)
+   (length-limit/http-request-head nil :type (or null integer))
+   (length-limit/http-request-body nil :type (or null integer))
    (lock (make-recursive-lock "hu.dwim.web-server server lock"))
    (shutdown-initiated #f :type boolean)
    (workers (make-adjustable-vector 16) :type sequence)
@@ -382,11 +383,40 @@
     (iolib:socket-connection-reset-error (incf (client-connection-reset-count-of *server*))))
   (invoke-restart (find-restart 'abort-server-request)))
 
-(def method read-request ((server server) stream)
-  (let ((*request-content-length-limit* (request-content-length-limit-of server)))
-    (read-http-request stream)))
+(def method read-request ((server server) client-stream)
+  (bind ((client-fd (iolib.streams:fd-of client-stream))
+         (http-request-head-buffer (read-http-request/head client-fd :length-limit (or (length-limit/http-request-head-of server)
+                                                                                       *length-limit/http-request-head*)))
+         ((:values http-method raw-uri version-string major-version minor-version
+                   uri headers)
+          (parse-http-request/head http-request-head-buffer))
+         (raw-content-length (header-alist-value headers +header/content-length+))
+         (keep-alive? (and raw-content-length
+                           (parse-integer raw-content-length :junk-allowed #t)
+                           (>= major-version 1)
+                           (>= minor-version 1)
+                           (not (string= (header-alist-value headers +header/connection+) "close")))))
+    (make-instance 'http-request
+                   :raw-uri raw-uri
+                   :uri uri
+                   :keep-alive keep-alive?
+                   :client-stream client-stream
+                   :query-parameters (query-parameters-of uri) ; will only contain params coming in the http body after calling ENSURE-HTTP-REQUEST-BODY-IS-PARSED
+                   :http-method http-method
+                   :http-version-string version-string
+                   :http-major-version major-version
+                   :http-minor-version minor-version
+                   :headers headers)))
 
-(def method handle-request :around ((server server) (request request))
+(def function ensure-http-request-body-is-parsed (request &key (length-limit *length-limit/http-request-body*))
+  (bind ((*length-limit/http-request-body* length-limit))
+    (setf (query-parameters-of request) (parse-http-request/body (client-stream-of request)
+                                                                 (header-value request +header/content-length+)
+                                                                 (header-value request +header/content-type+)
+                                                                 (query-parameters-of request))))
+  request)
+
+(def method handle-request :around ((server server) (request http-request))
   (bind ((start-time (get-monotonic-time))
          (start-bytes-allocated (get-bytes-allocated))
          (raw-uri (raw-uri-of request))

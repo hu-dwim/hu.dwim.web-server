@@ -6,48 +6,117 @@
 
 (in-package :hu.dwim.web-server)
 
-(def (generic e) header-value (message header-name))
-(def (generic e) (setf header-value) (value message header-name))
+;;;;;;
+;;; request
 
-(def generic send-response (response)
-  (:documentation "Emit RESPONSE into the http stream."))
+(def method close-request ((request http-request))
+  (map-request-parameters (lambda (name value)
+                            (declare (ignore name))
+                            (when (typep value 'rfc2388-binary:mime-part)
+                              (delete-file (rfc2388-binary:content value))))
+                          request)
+  (values))
 
-(def generic close-response (response)
-  (:documentation "This method is called when RESPONSE is no longer needed."))
+(def function accepts-encoding? (encoding-name)
+  (not (null (assoc encoding-name (accept-encodings-of *request*) :test #'string=))))
 
-(def generic send-headers (response))
+(def method accept-encodings-of :around ((request http-request))
+  (if (slot-boundp request 'accept-encodings)
+      (call-next-method)
+      (setf (accept-encodings-of request)
+            (aprog1
+                (parse-accept-header-value (or (header-value request +header/accept-encoding+) ""))
+              (http.dribble "Parsed the accept-encoding field for the request: ~A" it)))))
 
-(def generic close-request (request))
+(def method cookies-of :around ((request http-request))
+  (if (slot-boundp request 'cookies)
+      (call-next-method)
+      (setf (cookies-of request)
+            ;; if we called SAFE-PARSE-COOKIES here, then cookies that don't match the domain restrinctions were dropped.
+            ;; instead we parse all cookies and let the users control what they will accept.
+            (aprog1
+                (rfc2109:parse-cookies (header-value request "Cookie"))
+              (http.dribble "Parsed the cookies for the request: ~A" it)))))
 
-(def class* http-message ()
-  ((headers nil)
-   ;; left unbound, which is a marker for the lazy request cookie parser to do the parsing
-   (cookies :documentation "An alist cache of the parsed Cookie header value. Its accessor lazily initializes the slot.")))
+(def (function e) parameter-value (name &optional default)
+  (bind (((:values value found?) (request-parameter-value *request* name)))
+    (values (if found? value default) found?)))
 
-(def (function io) header-alist-value (alist header-name)
-  (cdr (assoc header-name alist :test #'string=)))
+(def (function e) map-parameters (visitor)
+  (map-request-parameters visitor *request*))
 
-(define-setf-expander header-alist-value (alist header-name &environment env)
-  (bind (((:values temps values new-value-for-setter setter getter) (get-setf-expansion alist env)))
-    (assert (= 1 (length new-value-for-setter)))
-    (setf new-value-for-setter (first new-value-for-setter))
-    (with-unique-names (new-value alist)
-      (values temps
-              values
-              `(,new-value)
-              `(bind ((,alist ,getter))
-                 (aif (assoc ,header-name ,alist :test #'string=)
-                      (setf (cdr it) ,new-value)
-                      (bind ((,new-value-for-setter (list* (cons ,header-name ,new-value) ,alist)))
-                        ,setter
-                        ,new-value)))
-              `(header-alist-value ,alist ,header-name)))))
+(def (macro e) do-parameters ((name value) &body body)
+  `(map-request-parameters
+    (lambda (,name ,value)
+      ,@body)
+    *request*))
 
-(def method header-value ((message http-message) header-name)
-  (header-alist-value (headers-of message) header-name))
+(def (function e) request-parameter-value (request name &optional default)
+  (bind ((entry (assoc name (query-parameters-of request) :test #'string=))
+         (value (cdr entry)))
+    (if entry
+        (when (equal value "")
+          (setf value nil))
+        (setf value default))
+    (values value (not (null entry)))))
 
-(def method (setf header-value) (value (message http-message) header-name)
-  (setf (header-alist-value (headers-of message) header-name) value))
+(def (function e) map-request-parameters (visitor request)
+  (bind ((result (list)))
+    (dolist ((name . value) (query-parameters-of request))
+      (push (funcall visitor name value) result))
+    (nreverse result)))
+
+
+;;;;;;
+;;; response
+
+(def (class* e) http-response (http-message response)
+  ((headers-are-sent #f :type boolean)
+   (external-format +default-external-format+ :type external-format :documentation "May or may not be used by some higher level functionalities")))
+
+(def method close-response ((self http-response))
+  (values))
+
+(def constructor http-response
+  (setf (header-value -self- +header/status+) +http-ok+)
+  (setf (cookies-of -self-) (list)))
+
+(def method encoding-name-of ((self response))
+  (aif (external-format-of self)
+       (encoding-name-of it)
+       (error "No external format for response ~A" self)))
+
+(def (function e) disallow-response-caching (response)
+  "Sets the appropiate response headers that will instruct the clients not to cache this response."
+  (disallow-response-caching-in-header-alist (headers-of response))
+  response)
+
+
+;;;;;;
+;;; primitive-response
+
+(def method send-headers ((response primitive-http-response))
+  (http.debug "Sending headers of ~A" response)
+  (send-http-headers (headers-of response) (cookies-of response)))
+
+(def method send-response :around ((response primitive-http-response))
+  (store-response response)
+  (bind ((client-stream (client-stream-of *request*))
+         (new-external-format (external-format-of response))
+         (original-external-format (iolib:external-format-of client-stream)))
+    (http.debug "Sending primitive response ~A, new external-format ~A, original external-format ~A" response new-external-format original-external-format)
+    (if new-external-format
+        (unwind-protect
+             (progn
+               (setf (iolib:external-format-of client-stream) new-external-format)
+               (call-next-method))
+          (setf (iolib:external-format-of client-stream) original-external-format))
+        (call-next-method))))
+
+(def method send-response ((response primitive-http-response))
+  (assert (not (headers-are-sent-p response)) () "The headers of ~A have already been sent, this is a program error." response)
+  (setf (headers-are-sent-p response) #t)
+  (send-headers response))
 
 
 ;;;;;;
@@ -127,185 +196,6 @@
 
 
 ;;;;;;
-;;; Request
-
-(def (class* eas) request (http-message)
-  ((client-stream :type stream)
-   (keep-alive :initform #t :type boolean :accessor keep-alive?)
-   (http-method :type string)
-   (http-version-string :type string)
-   (http-major-version :type integer)
-   (http-minor-version :type integer)
-   (raw-uri :type string)
-   (uri :type uri)
-   (query-parameters :type list :documentation "Holds all the query parameters from the uri and/or the request body")
-   (accept-encodings :type list :documentation "An alist cache of the parsed ACCEPT-ENDODINGS header value. Its accessor lazily initializes the slot.")))
-
-(def method accept-encodings-of :around ((request request))
-  (if (slot-boundp request 'accept-encodings)
-      (call-next-method)
-      (setf (accept-encodings-of request)
-            (aprog1
-                (parse-accept-header-value (or (header-value request +header/accept-encoding+) ""))
-              (http.dribble "Parsed the accept-encoding field for the request: ~A" it)))))
-
-(def function accepts-encoding? (encoding-name)
-  (not (null (assoc encoding-name (accept-encodings-of *request*) :test #'string=))))
-
-(def method cookies-of :around ((request request))
-  (if (slot-boundp request 'cookies)
-      (call-next-method)
-      (setf (cookies-of request)
-            ;; if we called SAFE-PARSE-COOKIES here, then cookies that don't match the domain restrinctions were dropped.
-            ;; instead we parse all cookies and let the users control what they will accept.
-            (aprog1
-                (rfc2109:parse-cookies (header-value request "Cookie"))
-              (http.dribble "Parsed the cookies for the request: ~A" it)))))
-
-(def (function e) parameter-value (name &optional default)
-  (bind (((:values value found?) (request-parameter-value *request* name)))
-    (values (if found? value default) found?)))
-
-(def (function e) map-parameters (visitor)
-  (map-request-parameters visitor *request*))
-
-(def (macro e) do-parameters ((name value) &body body)
-  `(map-request-parameters
-    (lambda (,name ,value)
-      ,@body)
-    *request*))
-
-(def (function e) request-parameter-value (request name &optional default)
-  (bind ((entry (assoc name (query-parameters-of request) :test #'string=))
-         (value (cdr entry)))
-    (if entry
-        (when (equal value "")
-          (setf value nil))
-        (setf value default))
-    (values value (not (null entry)))))
-
-(def (function e) map-request-parameters (visitor request)
-  (bind ((result (list)))
-    (dolist ((name . value) (query-parameters-of request))
-      (push (funcall visitor name value) result))
-    (nreverse result)))
-
-(def method close-request ((request request))
-  (map-request-parameters (lambda (name value)
-                            (declare (ignore name))
-                            (when (typep value 'rfc2388-binary:mime-part)
-                              (delete-file (rfc2388-binary:content value))))
-                          request)
-  (values))
-
-
-;;;;;;
-;;; Response
-
-(def (class* e) response (http-message)
-  ((headers-are-sent #f :type boolean)
-   (external-format +default-external-format+ :type external-format :documentation "May or may not be used by some higher level functionalities")))
-
-(def method close-response ((self response))
-  (values))
-
-(def (class* e) primitive-response (response)
-  ()
-  (:documentation "Primitive responses are the ones that are ready to be serialized into the network stream and transferred to the client."))
-
-(def constructor response
-  (setf (header-value -self- +header/status+) +http-ok+)
-  (setf (cookies-of -self-) (list)))
-
-(def method encoding-name-of ((self response))
-  (aif (external-format-of self)
-       (encoding-name-of it)
-       (error "No external format for response ~A" self)))
-
-(def (function io) write-crlf (&optional (stream *standard-output*))
-  (write-byte +carriage-return+ stream)
-  (write-byte +linefeed+ stream))
-
-(def macro disallow-response-caching-in-header-alist (headers)
-  (with-unique-names (header-name header-value)
-    `(iter (for (,header-name . ,header-value) :in +disallow-response-caching-header-values+)
-           (setf (header-alist-value ,headers ,header-name) ,header-value))))
-
-(def macro enforce-response-caching-in-header-alist (headers)
-  `(setf
-    ;; the w3c spec requires a maximum age of 1 year
-    ;; Firefox 3+ needs 'public' to cache this resource when received via SSL
-    (header-alist-value ,headers +header/cache-control+) "public max-age=31536000"
-    (header-alist-value ,headers +header/expires+) (local-time:to-rfc1123-timestring
-                                                    (local-time:adjust-timestamp (local-time:now) (offset :year 1)))))
-
-(def (function e) disallow-response-caching (response)
-  "Sets the appropiate response headers that will instruct the clients not to cache this response."
-  (disallow-response-caching-in-header-alist (headers-of response))
-  response)
-
-(def (function o) send-http-headers (headers cookies &key (stream (client-stream-of *request*)))
-  (flet ((write-header-line (name value)
-           (http.dribble "Sending header ~S: ~S" name value)
-           (write-sequence (string-to-us-ascii-octets name) stream)
-           (write-sequence #.(string-to-us-ascii-octets ": ") stream)
-           (write-sequence (string-to-iso-8859-1-octets value) stream)
-           (write-crlf stream)
-           (values)))
-    (bind ((status (or (assoc-value headers +header/status+ :test #'string=)
-                       +http-ok+))
-           (date-header-seen? #f))
-      (http.debug "Sending headers (Status: ~S)" status)
-      (write-sequence #.(string-to-us-ascii-octets "HTTP/1.1 ") stream)
-      (write-sequence (string-to-us-ascii-octets status) stream)
-      (write-byte +space+ stream)
-      (write-crlf stream)
-      (dolist ((name . value) headers)
-        (when (string= name +header/date+)
-          (setf date-header-seen? #t))
-        (when value
-          (write-header-line name value)))
-      (unless date-header-seen?
-        (write-header-line +header/date+ (local-time:to-rfc1123-timestring (local-time:now))))
-      ;; TODO: connection keep-alive handling
-      (write-sequence "Connection: Close" stream)
-      (write-crlf stream)
-      (dolist (cookie cookies)
-        (write-header-line "Set-Cookie"
-                           (if (rfc2109:cookie-p cookie)
-                               (rfc2109:cookie-string-from-cookie-struct cookie)
-                               cookie)))
-      (write-crlf stream)
-      status)))
-
-(def method send-headers ((response primitive-response))
-  (http.debug "Sending headers of ~A" response)
-  (send-http-headers (headers-of response) (cookies-of response)))
-
-(def method send-response :around ((response primitive-response))
-  (store-response response)
-  (bind ((client-stream (client-stream-of *request*))
-         (new-external-format (external-format-of response))
-         (original-external-format (iolib:external-format-of client-stream)))
-    (http.debug "Sending primitive response ~A, new external-format ~A, original external-format ~A" response new-external-format original-external-format)
-    (if new-external-format
-        (unwind-protect
-             (progn
-               (setf (iolib:external-format-of client-stream) new-external-format)
-               (call-next-method))
-          (setf (iolib:external-format-of client-stream) original-external-format))
-        (call-next-method))))
-
-(def method send-response ((response response))
-  (send-response (convert-to-primitive-response response)))
-
-(def method send-response ((response primitive-response))
-  (assert (not (headers-are-sent-p response)) () "The headers of ~A have already been sent, this is a program error." response)
-  (setf (headers-are-sent-p response) #t)
-  (send-headers response))
-
-
-;;;;;;
 ;;; Response with html stream
 
 (def (class* e) response-with-html-stream (response)
@@ -335,7 +225,7 @@
 ;;;;;;
 ;;; Functional response
 
-(def (class* e) functional-response (primitive-response)
+(def (class* e) functional-response (primitive-http-response)
   ((thunk :type (or symbol function))
    (cleanup-thunk nil :type (or symbol function)))
   (:documentation "A primitive-response that sends the headers and then calling its thunk. Keep in mind that it will not do any buffering, so it uses up a worker thread while sending the response through the network."))
@@ -410,7 +300,7 @@
 ;;;;;;
 ;;; Byte vector response
 
-(def (class* e) byte-vector-response (primitive-response)
+(def (class* e) byte-vector-response (primitive-http-response)
   ((last-modified-at nil)
    (body :type (or list vector))))
 
@@ -453,7 +343,7 @@
 ;;;;;;
 ;;; Not found response
 
-(def class* not-found-response (primitive-response)
+(def class* not-found-response (primitive-http-response)
   ())
 
 (def (function e) make-not-found-response ()
@@ -475,7 +365,7 @@
 ;;;;;;
 ;;; Request echo response
 
-(def class* request-echo-response (primitive-response)
+(def class* request-echo-response (primitive-http-response)
   ()
   (:documentation "Render back the request details as a simple html page, mostly for debugging purposes."))
 
@@ -517,7 +407,7 @@
 ;;;;;;
 ;;; Redirect response
 
-(def class* redirect-response (primitive-response)
+(def class* redirect-response (primitive-http-response)
   ((target-uri :type string)))
 
 (def print-object (redirect-response :identity #f :type #t)
@@ -548,7 +438,7 @@
 ;;;;;;
 ;;; Do nothing response
 
-(def class* do-nothing-response (primitive-response)
+(def class* do-nothing-response (primitive-http-response)
   ())
 
 (def (function e) make-do-nothing-response ()
@@ -557,13 +447,3 @@
 (def method send-response ((self do-nothing-response))
   ;; nop
   )
-
-(def (generic e) convert-to-primitive-response (response)
-  (:documentation "Called on all responses before trying to emit them, and it's supposed to return a PRIMITIVE-RESPONSE.")
-  (:method :around (response)
-    (bind ((*response* response))
-      (call-next-method)))
-  (:method ((response primitive-response))
-    response)
-  (:method ((response null))
-    nil))

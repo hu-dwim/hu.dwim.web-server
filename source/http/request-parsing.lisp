@@ -6,12 +6,6 @@
 
 (in-package :hu.dwim.web-server)
 
-(def generic read-request (server stream))
-
-(def method read-request :around (server stream)
-  (with-thread-name " / READ-REQUEST"
-    (call-next-method)))
-
 (def (function io) parse-http-version (version-string)
   (declare (type string version-string))
   (flet ((fail-unless (condition)
@@ -26,143 +20,209 @@
         (fail-unless (= (length version-string) end-position))
         (values major-version minor-version)))))
 
-(def (function o) read-http-request (stream)
+(def (function o) read-http-request/head (client-fd &key (length-limit *length-limit/http-request-head*))
+  (check-type length-limit (integer 512))
+  (bind ((buffer-length length-limit)
+         (buffer/lisp (make-array buffer-length :element-type '(unsigned-byte 8)))
+         (marker #.(coerce-to-simple-ub8-vector
+                    (list +carriage-return+ +linefeed+ +carriage-return+ +linefeed+)))
+         (marker-length (length marker))
+         (position 0)
+         (marker-position 0))
+    (cffi-sys:with-pointer-to-vector-data (buffer buffer/lisp)
+      (iter
+        (while (< marker-position marker-length))
+        (when (>= position buffer-length)
+          (request-length-limit-reached 'read-http-request/head buffer-length position))
+        (for bytes-read = (ignore-some-conditions (iolib.syscalls:ewouldblock)
+                            (iolib.syscalls:read client-fd
+                                                 (cffi-sys:inc-pointer buffer position)
+                                                 ;; we can read as many bytes as the number of bytes left in the marker
+                                                 (- marker-length marker-position))))
+        (if (or (not bytes-read)
+                (zerop bytes-read))
+            (sleep 0.1) ; KLUDGE use call/cc primitives instead of busy waiting
+            (iter
+              (repeat bytes-read)
+              (if (= (cffi:mem-ref buffer :char position)
+                     (aref marker marker-position))
+                  (incf marker-position)
+                  (setf marker-position 0))
+              (incf position)))))
+    (shrink-vector buffer/lisp position)))
+
+(def (function o) parse-http-request/head (buffer)
   (handler-bind ((uri-parse-error (lambda (error)
                                     (illegal-http-request/error (princ-to-string error)))))
-    (bind ((line (read-http-request-line stream :length-limit +maximum-http-request-header-line-length+))
-           (pieces (split-http-request-line line 2 3))
-           ((http-method uri-octets &optional raw-version-string) pieces))
-      (http.dribble "In READ-HTTP-REQUEST, first line in ISO-8859-1 is ~S" (iso-8859-1-octets-to-string line))
-      ;; uri decoding: octets -> us-ascii -> foo%12%34bar unescape resulting in octets -> utf-8.
-      ;; processing anything else here would be ad-hoc...
-      (bind ((headers (aprog1
-                          (read-http-request-headers stream)
+    (bind (((:values http-method raw-uri version-string position) (parse-http-request-line buffer)))
+      (http.dribble "In PARSE-HTTP-REQUEST/HEAD; http-method is ~S, raw-uri is ~S, version is ~S" http-method raw-uri version-string)
+      (bind (((:values major-version minor-version) (parse-http-version version-string))
+             (raw-uri-length (length raw-uri))
+             (headers (aprog1
+                          (parse-http-request-headers buffer position)
                         (http.dribble "Request headers are ~S" it))))
-        (flet ((header-value (name &key mandatory)
-                 (bind ((result (awhen (assoc name headers :test #'string=)
-                                  (cdr it))))
-                   (when (and mandatory
-                              (not result))
-                     (illegal-http-request/error "No ~S header in the request" name))
-                   result)))
-          (bind ((version-string (us-ascii-octets-to-string raw-version-string))
-                 ((:values major-version minor-version) (parse-http-version version-string))
-                 (raw-uri (us-ascii-octets-to-string uri-octets))
-                 (raw-uri-length (length raw-uri))
-                 (raw-content-length (header-value +header/content-length+))
-                 (keep-alive? (and raw-content-length
-                                   (parse-integer raw-content-length :junk-allowed #t)
-                                   (>= major-version 1)
-                                   (>= minor-version 1)
-                                   (not (string= (header-value +header/connection+) "close"))))
-                 (host (header-value "Host" :mandatory #t))
-                 (host-length (length host))
-                 (scheme "http")        ; TODO
-                 (scheme-length (length scheme))
-                 (uri-string (bind ((position 0)
-                                    (result (make-string (+ scheme-length #.(length "://") host-length raw-uri-length)
-                                                         :element-type 'base-char)))
-                               (replace result scheme)
-                               (replace result #.(coerce "://" 'simple-base-string) :start1 (incf position scheme-length))
-                               (replace result host :start1 (incf position #.(length "://")))
-                               (replace result raw-uri :start1 (incf position host-length))
-                               result))
-                 (uri (%parse-uri uri-string))
-                 (uri-parameters (query-parameters-of uri)))
-            (http.dribble "Request query parameters from the uri: ~S" uri-parameters)
-            ;; extend the parameters with the possible stuff in the request body
-            ;; making sure duplicate entries are recorded in a list keeping the original order.
-            (bind ((parameters (read-http-request-body stream
-                                                       raw-content-length
-                                                       (header-value "Content-Type")
-                                                       uri-parameters)))
-              (http.dribble "All the request query parameters: ~S" parameters)
-              (make-instance 'request
-                             :raw-uri raw-uri
-                             :uri uri
-                             :keep-alive keep-alive?
-                             :client-stream stream
-                             :query-parameters parameters
-                             :http-method (us-ascii-octets-to-string http-method)
-                             :http-version-string version-string
-                             :http-major-version major-version
-                             :http-minor-version minor-version
-                             :headers headers))))))))
+        (bind ((host (or (assoc-value headers "Host" :test #'equal)
+                         (illegal-http-request/error "No \"Host\" header in the request")))
+               (host-length (length host))
+               (scheme "http")        ; TODO
+               (scheme-length (length scheme))
+               (uri-string (bind ((position 0)
+                                  (result (make-string (+ scheme-length #.(length "://") host-length raw-uri-length)
+                                                       :element-type 'base-char)))
+                             (replace result scheme)
+                             (replace result #.(coerce "://" 'simple-base-string) :start1 (incf position scheme-length))
+                             (replace result host :start1 (incf position #.(length "://")))
+                             (replace result raw-uri :start1 (incf position host-length))
+                             result))
+               (uri (%parse-uri uri-string)))
+          (http.dribble "Request query parameters from the uri: ~S" (query-parameters-of uri))
+          ;; extend the parameters with the possible stuff in the request body
+          ;; making sure duplicate entries are recorded in a list keeping the original order.
+          (values http-method raw-uri version-string major-version minor-version
+                  uri headers))))))
 
-(declaim (ftype (function * simple-ub8-vector) read-http-request-line))
+(def (function o) take-iso-8859-1-substring-from-ub8-vector (buffer start end)
+  (bind ((result (make-string (- end start) :element-type 'base-char)))
+    (iter (for source-index :first start :then (1+ source-index))
+          (for destination-index :upfrom 0)
+          (while (< source-index end))
+          ;; usage of CODE-CHAR: iso-8859-1 coincides with the first 256 code points of unicode
+          (setf (aref result destination-index) (code-char (aref buffer source-index))))
+    result))
 
-(def (function o) read-http-request-line (stream &key (length-limit #.(* 4 1024)))
-  "A simple state machine which reads chars from STREAM until it gets a CR-LF sequence. Signals an error upon EOF."
-  (declare (type array-index length-limit))
-  (bind ((buffer (make-adjustable-vector 64 :element-type '(unsigned-byte 8)))
-         (count 0))
-    (declare (type array-index count))
-    (labels ((read-next-char ()
-               (bind ((byte (read-byte stream t 'eof)))
-                 (assert (not (eq byte 'eof)))
-                 (when (> (incf count) length-limit)
-                   (illegal-http-request/error "LENGTH-LIMIT (~A) reached in READ-HTTP-REQUEST-LINE" length-limit))
-                 byte))
-             (cr ()
-               (let ((next-byte (read-next-char)))
+(def (function io) is-alphanumeric-char-code? (byte)
+  (or (<= #.(char-code #\a) byte #.(char-code #\z))
+      (<= #.(char-code #\A) byte #.(char-code #\Z))
+      (<= #.(char-code #\0) byte #.(char-code #\9))))
+
+(declaim (ftype (function (simple-ub8-vector) (values string string (or null string) array-index)) parse-http-request-line))
+(def (function o) parse-http-request-line (buffer)
+  "A simple state machine which reads chars from CLIENT-FD until it gets a CR-LF sequence. Signals an error upon EOF."
+  (declare (type simple-ub8-vector buffer))
+  (bind ((buffer/length (length buffer))
+         (position 0)
+         (http-method nil)
+         (uri nil)
+         (uri/start-position nil)
+         (version nil)
+         (version/start-position nil))
+    (declare (type array-index position buffer/length))
+    (labels ((is-line-end? (byte)
+               (or (eql byte #.+carriage-return+)
+                   (eql byte #.+linefeed+)))
+             (next-byte ()
+               (when (>= position buffer/length)
+                 (illegal-http-request/error "~S ran out of available bytes in the buffer" 'parse-http-request-line))
+               (prog1
+                   (aref buffer position)
+                 (incf position)))
+             (fail-unless-linefeed ()
+               (unless (eql +linefeed+ (next-byte))
+                 (illegal-http-request/error "Expecting a line-feed after a carriage-return character")))
+             (http-method ()
+               (bind ((next-byte (next-byte)))
+                 (cond
+                   ((eql next-byte #.+space+)
+                    (take-http-method)
+                    (uri))
+                   ((is-line-end? next-byte)
+                    (illegal-http-request/error "Premature end of the first line of the HTTP request while parsing the HTTP method part"))
+                   ((not (is-alphanumeric-char-code? next-byte))
+                    (illegal-http-request/error "Illegal character ~S while parsing the HTTP method part" next-byte))
+                   (t
+                    (http-method)))))
+             (take-http-method ()
+               (setf http-method (take-iso-8859-1-substring-from-ub8-vector buffer 0 (1- position)))
+               (setf uri/start-position position))
+             (uri ()
+               (bind ((next-byte (next-byte)))
                  (case next-byte
-                   (#.+linefeed+
-                    (return-from read-http-request-line (coerce buffer 'simple-ub8-vector)))
-                   (t ;; add both the cr and this char to the buffer
-                    (vector-push-extend #.+carriage-return+ buffer)
-                    (vector-push-extend next-byte buffer)
-                    (next)))))
-             (next ()
-               (let ((next-byte (read-next-char)))
+                   (#.+space+
+                    (take-uri)
+                    (version))
+                   (#.+carriage-return+
+                    (take-uri)
+                    (fail-unless-linefeed))
+                   (t
+                    (uri)))))
+             (take-uri ()
+               (setf uri (take-iso-8859-1-substring-from-ub8-vector buffer uri/start-position (1- position)))
+               (setf version/start-position position))
+             (version ()
+               (bind ((next-byte (next-byte)))
                  (case next-byte
                    (#.+carriage-return+
-                    (cr))
-                   (#.+linefeed+
-                    (illegal-http-request/error "Linefeed received without a Carriage Return"))
+                    (take-version)
+                    (fail-unless-linefeed))
                    (t
-                    (vector-push-extend next-byte buffer)
-                    (next))))))
-      (next))))
+                    (version)))))
+             (take-version ()
+               (setf version (take-iso-8859-1-substring-from-ub8-vector buffer version/start-position (1- position)))))
+      (http-method))
+    (unless (member http-method +valid-http-methods+ :test #'string=)
+      (illegal-http-request/error "Illegal HTTP method ~S" http-method))
+    ;; TODO check uri and version for valid characters? or later while parsing them?
+    (values http-method uri version position)))
 
-(def (function io) split-http-request-line (line &optional minimum-count maximum-count)
-  (declare (type simple-ub8-vector line)
-           (type (or null fixnum) minimum-count maximum-count)
-           (inline split-ub8-vector))
-  (bind ((pieces (split-ub8-vector +space+ line))
-         (count (length pieces)))
-    (when (or (and minimum-count
-                   (< count minimum-count))
-              (and maximum-count
-                   (< maximum-count count)))
-      (illegal-http-request/error "~S: illegal http request line ~S" 'split-http-request-line line))
-    pieces))
-
-(def (function o) read-http-request-headers (stream)
-  (flet ((split-http-header-line (line)
-           (declare (type simple-ub8-vector line))
-           (let* ((colon-position (position +colon+ line :test #'=))
-                  (name-length colon-position)
-                  (value-start (1+ colon-position))
-                  (value-end (length line)))
-             (declare (type array-index name-length value-start value-end))
-             (iter
-               ;; skip leading space and tab chars in the header value
-               (while (< value-start value-end))
-               (for byte = (aref line value-start))
-               (while (or (= +space+ byte)
-                          (= +tab+ byte)))
-               (incf value-start))
-             (cons (subseq line 0 name-length)
-                   (subseq line value-start value-end)))))
-    (iter
-      (for header-line = (read-http-request-line stream))
-      (for count :upfrom 0)
-      (until (zerop (length header-line)))
-      (when (> count +maximum-http-request-header-line-count+)
-        (illegal-http-request/error "More than ~A http header lines" +maximum-http-request-header-line-count+))
-      (for (name . value) = (split-http-header-line header-line))
-      (collect (cons (us-ascii-octets-to-string name)
-                     (iso-8859-1-octets-to-string value))))))
+(def (function o) parse-http-request-headers (buffer position)
+  (check-type buffer simple-ub8-vector)
+  (check-type position array-index)
+  (bind ((buffer/length (length buffer))
+         (headers '()))
+    (labels ((next-byte ()
+               (when (>= position buffer/length)
+                 (illegal-http-request/error "~S ran out of available bytes in the buffer" 'parse-http-request-headers))
+               (prog1
+                   (aref buffer position)
+                 (incf position)))
+             (fail-unless-linefeed ()
+               (unless (eql +linefeed+ (next-byte))
+                 (illegal-http-request/error "Expecting a line-feed after a carriage-return character")))
+             (header-line ()
+               (bind ((name nil)
+                      (name/start-position position)
+                      (value nil)
+                      (value/start-position nil))
+                 (labels ((name/start ()
+                            (case (next-byte)
+                              (#.(char-code #\:)
+                               (illegal-http-request/error "Zero length name in a HTTP header line"))
+                              (#.+carriage-return+
+                               (fail-unless-linefeed))
+                              (t
+                               (name))))
+                          (name ()
+                            (case (next-byte)
+                              (#.(char-code #\:)
+                               (setf name (take-iso-8859-1-substring-from-ub8-vector buffer name/start-position (1- position)))
+                               (name/skip-whitespace))
+                              (#.(list +carriage-return+ +linefeed+)
+                               (illegal-http-request/error "Premature end of line while parsing a HTTP header name"))
+                              (t
+                               (name))))
+                          (name/skip-whitespace ()
+                            (case (next-byte)
+                              ((#.(char-code #\Space)
+                                #.(char-code #\Tab))
+                               (name/skip-whitespace))
+                              (t
+                               (setf value/start-position (1- position))
+                               (value))))
+                          (value ()
+                            (case (next-byte)
+                              (#.+carriage-return+
+                               (setf value (take-iso-8859-1-substring-from-ub8-vector buffer value/start-position (1- position)))
+                               (fail-unless-linefeed))
+                              (t
+                               (value)))))
+                   (name/start)
+                   (when name
+                     (when (zerop (length name))
+                       (illegal-http-request/error "Zero length name in a HTTP header line"))
+                     (push (cons name value) headers)
+                     (header-line))))))
+      (header-line))
+    (nreverse headers)))
 
 (def (function o) make-rfc2388-callback-factory (form-data-accumulator file-accumulator)
   (named-lambda rfc2388-callback-factory (mime-part)
@@ -231,20 +291,21 @@
         (t
          (illegal-http-request/error "Don't know how to handle the mime-part ~S (content-disposition: ~S)" mime-part content-disposition-header))))))
 
-(def (function o) read-http-request-body (stream raw-content-length raw-content-type initial-parameter-alist)
+(def (function o) parse-http-request/body (stream raw-content-length raw-content-type initial-parameter-alist)
   (when (and raw-content-length
              raw-content-type)
-    (with-thread-name " / READ-REQUEST-BODY"
+    (with-thread-name " / PARSE-HTTP-REQUEST/BODY"
       (bind ((content-length (parse-integer raw-content-length :junk-allowed t)))
         (when (and content-length
                    (> content-length 0))
-          (when (> content-length *request-content-length-limit*)
-            (request-content-length-limit-reached content-length))
-          (bind (((:values content-type attributes) (rfc2388-binary:parse-header-value raw-content-type)))
-            (setf initial-parameter-alist (copy-alist initial-parameter-alist)) ; later on we may sideffect this alist
+          (when (> content-length *length-limit/http-request-body*)
+            (request-length-limit-reached 'parse-http-request/body *length-limit/http-request-body* content-length))
+          (bind (((:values content-type attributes) (rfc2388-binary:parse-header-value raw-content-type))
+                 ;; later on we may sideffect this alist, so copy
+                 (final-parameter-alist (copy-alist initial-parameter-alist)))
             (switch (content-type :test #'string=)
               ("application/x-www-form-urlencoded"
-               ;; TODO dos prevention, lower limit here than *request-content-length-limit*, or separate for files
+               ;; TODO dos prevention, lower limit here than *length-limit/http-request-body* or separate for files
                (bind ((buffer (make-array content-length :element-type '(unsigned-byte 8))))
                  (read-sequence buffer stream)
                  (bind ((buffer-as-string
@@ -258,20 +319,22 @@
                    (http.dribble "Parsing application/x-www-form-urlencoded body. Attributes: ~S, value: ~S" attributes buffer-as-string)
                    ;; TODO buffer-as-string should never be non-ascii... read up on the standard, do something about that coerce...
                    (setf buffer-as-string (coerce buffer-as-string 'simple-base-string))
-                   (return-from read-http-request-body (parse-query-parameters buffer-as-string
-                                                                               :initial-parameters initial-parameter-alist
-                                                                               :sideffect-initial-parameters #t)))))
+                   (return-from parse-http-request/body (parse-query-parameters buffer-as-string
+                                                                                :initial-parameters final-parameter-alist
+                                                                                :sideffect-initial-parameters #t)))))
               ("multipart/form-data"
                (http.dribble "Parsing multipart/form-data body. Attributes: ~S." attributes)
-               (bind ((boundary (cdr (assoc "boundary" attributes :test #'string=))))
-                 ;; TODO DOS prevention: add support for rfc2388-binary to limit parsing length if the ContentLength header is fake, pass in *request-content-length-limit*
+               (bind ((boundary (cdr (assoc "boundary" attributes :test #'string=)))
+                      ;; no need to copy the alist, because we only push to its head
+                      (final-parameter-alist initial-parameter-alist))
+                 ;; TODO DOS prevention: add support for rfc2388-binary to limit parsing length if the ContentLength header is fake, pass in *length-limit/http-request-body*
                  (rfc2388-binary:read-mime stream boundary
                                            (make-rfc2388-callback-factory
                                             (lambda (name value)
-                                              (record-query-parameter (cons name value) initial-parameter-alist))
+                                              (record-query-parameter (cons name value) final-parameter-alist))
                                             (lambda (name file-mime-part)
-                                              (record-query-parameter (cons name file-mime-part) initial-parameter-alist))))
-                 (return-from read-http-request-body initial-parameter-alist)))
+                                              (record-query-parameter (cons name file-mime-part) final-parameter-alist))))
+                 (return-from parse-http-request/body final-parameter-alist)))
               (t (illegal-http-request/error "Don't know how to handle content type ~S" content-type))))))))
   (http.debug "Skipped parsing request body, raw Content-Type is [~S], raw Content-Length is [~S]" raw-content-type raw-content-length)
   initial-parameter-alist)

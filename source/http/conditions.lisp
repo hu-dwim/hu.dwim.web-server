@@ -29,18 +29,23 @@ TODO delme?
   ((request (when (boundp '*request*)
               *request*))))
 
-(def (condition* e) request-content-length-limit-reached (request-processing-error)
-  ((content-length nil)
-   (content-length-limit *request-content-length-limit*))
+(def (condition* e) request-length-limit-reached (request-processing-error)
+  ((assumed-content-length nil)
+   (content-length-limit nil)
+   (operation nil))
   (:report (lambda (error stream)
-             (format stream "The content-length of the request is larger than allowed by the server policy (~A > ~A), see *REQUEST-CONTENT-LENGTH-LIMIT*"
-                     (content-length-of error)
-                     (content-length-limit-of error)))))
+             (format stream "The size of the request is larger than what's allowed by the server policy (~A >= ~A, in operation ~S); see ~S and/or ~S."
+                     (assumed-content-length-of error)
+                     (content-length-limit-of error)
+                     (operation-of error)
+                     '*length-limit/http-request-head*
+                     '*length-limit/http-request-body*))))
 
-(def function request-content-length-limit-reached (content-length &optional (content-length-limit *request-content-length-limit*))
-  (error 'request-content-length-limit-reached
-         :content-length content-length
-         :content-length-limit content-length-limit))
+(def function request-length-limit-reached (operation content-length-limit &optional assumed-content-length)
+  (error 'request-length-limit-reached
+         :assumed-content-length assumed-content-length
+         :content-length-limit content-length-limit
+         :operation operation))
 
 (def (condition e) access-denied-error (request-processing-error)
   ())

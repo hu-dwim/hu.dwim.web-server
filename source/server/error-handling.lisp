@@ -72,6 +72,25 @@
           (handle-toplevel-error/emit-response context error)))
     (abort-server-request "HANDLE-TOPLEVEL-ERROR succesfully handled the access denied error by sending an error page")))
 
+(def function emit-http-response/internal-server-error ()
+  (server.info "Sending an internal server error page for request ~S" (raw-uri-of *request*))
+  (emit-http-response/simple-html-document (:status +http-internal-server-error+
+                                                    :title #"error.internal-server-error.title"
+                                                    :cacheable #f)
+    (bind ((args (list :administrator-email-address (and (boundp '*server*)
+                                                         (administrator-email-address-of *server*)))))
+      (apply-localization-function 'render-error-page/internal-error args))))
+
+(def function emit-http-response/access-denied ()
+  (bind ((request-uri (if *request*
+                          (raw-uri-of *request*)
+                          "<unavailable>")))
+    (server.info "Sending an access denied error page for request ~S" request-uri)
+    (emit-http-response/simple-html-document (:status +http-forbidden+
+                                                      :title #"error.access-denied-error"
+                                                      :cacheable #f)
+      (apply-localization-function 'render-error-page/access-denied))))
+
 (def methods handle-toplevel-error/emit-response
 
   (:method :around (context error)
@@ -79,22 +98,7 @@
       (call-next-method)))
 
   (:method (context (error serious-condition))
-    (server.info "Sending an internal server error page for request ~S" (raw-uri-of *request*))
-    (emit-http-response/simple-html-document (:status +http-internal-server-error+
-                                              :title #"error.internal-server-error.title"
-                                              :cacheable #f)
-      ;; TODO this *server* reference here is leaking from server/
-      ;; that's why the usage of symbol-value...
-      (bind ((args (list :administrator-email-address (and (boundp '*server*)
-                                                           (administrator-email-address-of (symbol-value '*server*))))))
-        (apply-localization-function 'render-error-page/internal-error args))))
+    (emit-http-response/internal-server-error))
 
   (:method (context (error access-denied-error))
-    (bind ((request-uri (if *request*
-                            (raw-uri-of *request*)
-                            "<unavailable>")))
-      (server.info "Sending an access denied error page for request ~S" request-uri)
-      (emit-http-response/simple-html-document (:status +http-forbidden+
-                                                :title #"error.access-denied-error"
-                                                :cacheable #f)
-        (apply-localization-function 'render-error-page/access-denied)))))
+    (emit-http-response/access-denied)))

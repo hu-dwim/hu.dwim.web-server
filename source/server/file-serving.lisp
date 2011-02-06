@@ -243,7 +243,7 @@
 ;;;;;;
 ;;; Directory index
 
-(def class* directory-index-response (response)
+(def class* directory-index-response (http-response)
   ((path-prefix)
    (root-directory)
    (relative-path)

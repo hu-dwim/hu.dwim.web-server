@@ -28,27 +28,34 @@
                     (list +carriage-return+ +linefeed+ +carriage-return+ +linefeed+)))
          (marker-length (length marker))
          (position 0)
-         (marker-position 0))
+         (marker-position 0)
+         ;; KLUDGE deadline stuff should be hadled by a call/cc based multiplexer dropping dry connections
+         (start-time (get-monotonic-time))
+         (deadline (+ start-time 15)))
     (cffi-sys:with-pointer-to-vector-data (buffer buffer/lisp)
       (iter
         (while (< marker-position marker-length))
+        (when (> (get-monotonic-time) deadline)
+          (error 'iolib.syscalls:etimedout :handle client-fd :message "READ-HTTP-REQUEST/HEAD timed out"))
         (when (>= position buffer-length)
           (request-length-limit-reached 'read-http-request/head buffer-length position))
-        (for bytes-read = (ignore-some-conditions (iolib.syscalls:ewouldblock)
-                            (iolib.syscalls:read client-fd
-                                                 (cffi-sys:inc-pointer buffer position)
-                                                 ;; we can read as many bytes as the number of bytes left in the marker
-                                                 (- marker-length marker-position))))
-        (if (or (not bytes-read)
-                (zerop bytes-read))
-            (sleep 0.1) ; KLUDGE use call/cc primitives instead of busy waiting
-            (iter
-              (repeat bytes-read)
-              (if (= (cffi:mem-ref buffer :char position)
-                     (aref marker marker-position))
-                  (incf marker-position)
-                  (setf marker-position 0))
-              (incf position)))))
+        (for bytes-read = (handler-case
+                              (iolib.syscalls:read client-fd
+                                                   (cffi-sys:inc-pointer buffer position)
+                                                   ;; we can read as many bytes as the number of bytes left in the marker
+                                                   (- marker-length marker-position))
+                            (iolib.syscalls:ewouldblock ()
+                              ;; TODO implement the call/cc based multiplexer and get rid of this...
+                              (sleep 0.1)
+                              (next-iteration))))
+        (assert (integerp bytes-read))
+        (iter
+          (repeat bytes-read)
+          (if (= (cffi:mem-ref buffer :char position)
+                 (aref marker marker-position))
+              (incf marker-position)
+              (setf marker-position 0))
+          (incf position))))
     (shrink-vector buffer/lisp position)))
 
 (def (function o) parse-http-request/head (buffer)

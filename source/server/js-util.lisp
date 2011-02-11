@@ -154,7 +154,8 @@
        ,(IF *DEBUG-CLIENT-SIDE*
             `(bind ((to-be-thrown (array ,@ARGS-TO-THROW)))
                (log.error "Assertion failed, will throw " to-be-thrown)
-               (when dojo.config.isDebug
+               (when (or (not dojo)
+                         dojo.config.isDebug)
                  debugger)
                (throw to-be-thrown))
             `(throw (array ,@ARGS-TO-THROW))))})

@@ -17,7 +17,7 @@
               (values action action-id))
             (values))))))
 
-(def class* action (string-id-for-funcallable-mixin)
+(def (class* e) action (string-id-for-funcallable-mixin)
   ()
   (:metaclass funcallable-standard-class))
 

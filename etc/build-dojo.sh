@@ -70,8 +70,8 @@ if [ -z "${DOJO_PROFILE}" ]; then
 fi
 
 if [ -z "${DOJO_RELEASE_NAME}" ]; then
-  DOJO_RELEASE_NAME=`cd $DOJO_HOME; svn info | grep URL: | awk -F '/' '{print $NF}'`
-  DOJO_RELEASE_NAME=${DOJO_RELEASE_NAME}-`cd $DOJO_HOME; svn info | grep Revision: | awk '{print $2}'`
+  DOJO_RELEASE_NAME=`cd ${DOJO_HOME}; svn info | grep URL: | awk -F '/' '{print $NF}'`
+  DOJO_RELEASE_NAME=${DOJO_RELEASE_NAME}-`cd ${DOJO_HOME}; svn info | grep Revision: | awk '{print $2}'`
 fi
 
 #echo "Remaining arguments:"

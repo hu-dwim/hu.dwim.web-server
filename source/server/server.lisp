@@ -260,6 +260,7 @@
                                            (not (shutdown-initiated-p server))))
                                ;; TODO is this a constant or depends on server network load?
                                (setf (iolib:socket-option stream-socket :receive-timeout) 15)
+                               ;; iolib streams are based on non-blocking fd's, so we don't need to (iolib.syscalls::%set-fd-nonblock stream-socket-fd #t)
                                (worker-loop/serve-one-request threaded? server worker stream-socket)))))))
            (values)))
     (if threaded?

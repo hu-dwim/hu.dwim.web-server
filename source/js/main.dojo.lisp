@@ -6,13 +6,19 @@
 
 (in-package :hu.dwim.web-server)
 
-(log.debug "Started evaluating main.js of hu.dwim.web-server")
+(log.debug "Started evaluating main.dojo.js of hu.dwim.web-server")
 
 (dojo.getObject "hdws" #t)
 (dojo.getObject "hdws.io" #t)
 (dojo.getObject "hdws.i18n" #t)
 (dojo.getObject "hdws.field" #t)
 (dojo.getObject "hdws.help" #t)
+
+(defun $ (id)
+  (return (dojo.byId id)))
+
+(defun hdws.addOnLoad (function)
+  (dojo.addOnLoad function))
 
 (defun hdws.connect (objects event function)
   (assert objects "hdws.connect called with nil object")
@@ -570,7 +576,4 @@
            (value (aref resources (1+ idx))))
       (setf (aref hdws.i18n.resources name) value))))
 
-;;;;;;
-;;; End of story
-
-(log.debug "Finished evaluating main.js of hu.dwim.web-server")
+(log.debug "Finished evaluating main.dojo.js of hu.dwim.web-server")

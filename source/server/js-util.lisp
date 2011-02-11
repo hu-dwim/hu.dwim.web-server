@@ -34,24 +34,11 @@
 
 (def (js-macro e) |on-load| (&body body)
   {with-preserved-readtable-case
-   `(dojo.addOnLoad
+   `(hdws.addOnLoad
      (lambda ()
        ,@BODY))})
 
-(def (js-macro e) |with-dom-nodes| (bindings &body body)
-  (iter (for binding :in bindings)
-        (bind (((variable-name tag-name &key ((:|class| class))) binding))
-          (collect {with-preserved-readtable-case
-                     `(,VARIABLE-NAME (document.createElement ,TAG-NAME))} :into node-bindings)
-          (when class
-            (collect {with-preserved-readtable-case
-                       `(dojo.addClass ,VARIABLE-NAME ,CLASS)} :into forms)))
-        (finally (return {with-preserved-readtable-case
-                           `(bind (,@NODE-BINDINGS)
-                              ,@FORMS
-                              ,@BODY)}))))
-
-(def (js-macro e) |create-dom-node| (name)
+(def (js-macro e) |make-dom-node| (name)
   {with-preserved-readtable-case
     `(document.createElement ,NAME)})
 
@@ -85,10 +72,6 @@
       (if it
           ,THEN
           ,ELSE))})
-
-(def (js-macro e) $ (thing)
-  {with-preserved-readtable-case
-    `(dojo.byId ,THING)})
 
 ;; TODO this should probably be exported, but that causes package headaches...
 (def js-macro |defun| (name args &body body)

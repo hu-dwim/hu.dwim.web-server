@@ -31,6 +31,8 @@
            #:build-error-log-message
            #:log)
 
+  (:export #:$)
+
   (:shadowing-import-from :trivial-garbage
                           #:make-hash-table)
 

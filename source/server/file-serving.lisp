@@ -142,8 +142,8 @@
         (if (<= file-write-date/on-disk file-write-date)
             (files.debug "Found valid cached entry for ~A, in ~A" absolute-file-path broker)
             (progn
-              (setf file-write-date file-write-date/on-disk)
-              (update-directory-serving-broker/cache-entry broker cache-entry absolute-file-path relative-path root-directory response-compression)))
+              (update-directory-serving-broker/cache-entry broker cache-entry absolute-file-path relative-path root-directory response-compression)
+              (setf file-write-date file-write-date/on-disk)))
         (setf last-used-at (get-monotonic-time))
         (when (and cache
                    (not cache-entry-found?))

@@ -224,14 +224,14 @@
                       (setf cleanup-thunk nil))
                     (progn
                       (when exit-code
-                        (cgi.error (build-error-log-message :message (format nil "CGI command ~S returned with exit code ~S.~:[~:;~%Error output:~%~S~]"
-                                                                             cgi-command-line exit-code
-                                                                             (not (zerop stderr/length))
-                                                                             ;; TODO add :count limit to READ-FILE-INTO-STRING
-                                                                             (subseq-if-longer 1024 (read-file-into-string
-                                                                                                     (iolib.pathnames:file-path-namestring stderr/file))
-                                                                                               :postfix "[...]"))
-                                                            :include-backtrace #f)))
+                        (cgi.info (build-error-log-message :message (format nil "CGI command ~S returned with exit code ~S.~:[~:;~%Error output:~%~S~]"
+                                                                            cgi-command-line exit-code
+                                                                            (not (zerop stderr/length))
+                                                                            ;; TODO add :start & :end limit to READ-FILE-INTO-STRING
+                                                                            (subseq-if-longer 1024 (read-file-into-string
+                                                                                                    (iolib.pathnames:file-path-namestring stderr/file))
+                                                                                              :postfix "[...]"))
+                                                           :include-backtrace #f)))
                       (make-raw-functional-response ()
                         (emit-http-response/internal-server-error)))))
             (:always

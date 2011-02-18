@@ -46,7 +46,7 @@
                              (:module "util"
                               :depends-on ("logger" "configuration")
                               :components ((:file "l10n" :depends-on ("util"))
-                                           (:file "timer")
+                                           (:file "timer" :depends-on ("util"))
                                            (:file "util")
                                            (:file "timestring-parsing")))
                              (:module "http"

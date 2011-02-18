@@ -89,7 +89,10 @@
                   uri headers))))))
 
 (def (function o) take-iso-8859-1-substring-from-ub8-vector (buffer start end)
-  (bind ((result (make-string (- end start) :element-type 'base-char)))
+  ;; the base-char optimization may not necessarily be worth it...
+  (bind ((result (if (find-if [>= !1 128] buffer :start start :end end)
+                     (make-string (- end start) :element-type 'character)
+                     (make-string (- end start) :element-type 'base-char))))
     (iter (for source-index :first start :then (1+ source-index))
           (for destination-index :upfrom 0)
           (while (< source-index end))

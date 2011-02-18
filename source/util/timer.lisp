@@ -134,8 +134,7 @@
       (block running-timer-entry
         (with-layered-error-handlers ((lambda (error)
                                         (handle-toplevel-error timer error))
-                                      (lambda (reason)
-                                        (declare (ignore reason))
+                                      (lambda (&key &allow-other-keys)
                                         (return-from running-timer-entry)))
           (with-simple-restart (skip-timer-entry "Skip calling timer entry ~A" entry)
             (with-thread-name " / running timer entry"

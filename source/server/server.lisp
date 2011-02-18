@@ -323,7 +323,9 @@
              (server.error "Error while handling a server request in worker ~A on socket ~A: ~A" worker stream-socket condition))
            ;; no need to worry about (nested) errors here, see WITH-LAYERED-ERROR-HANDLERS
            (handle-toplevel-error *context-of-error* condition)
-           (server.dribble "HANDLE-TOPLEVEL-ERROR returned, worker continues...")))
+           (server.dribble "HANDLE-TOPLEVEL-ERROR returned, worker continues..."))
+         (abort-request (&key reason &allow-other-keys)
+           (abort-server-request reason)))
     (debug-only
       (assert (notany #'boundp '(*server* *broker-stack* *request* *response* *request-remote-address* *request-remote-address/string* *request-id*
                                  *matching-uri-path-element-stack* *matching-uri-path-element-stack/total-length* *matching-uri-path-element-stack/remaining-path*))))
@@ -347,7 +349,7 @@
             (unwind-protect-case (interrupted)
                 (bind ((swank::*sldb-quit-restart* (find-restart 'abort-server-request)))
                   (with-layered-error-handlers (#'handle-request-error
-                                                'abort-server-request
+                                                #'abort-request
                                                 :ignore-condition-callback (lambda (error)
                                                                              (is-error-from-client-stream? error stream-socket)))
                     (serve-one-request))
@@ -359,7 +361,7 @@
                                                  ;; let's not clutter the error log with non-interesting errors... (server.error (build-error-log-message :error-condition error :message (format nil "Failed to close the socket stream in SERVE-ONE-REQUEST while ~A the UNWIND-PROTECT block." (if interrupted "unwinding" "normally exiting"))))
                                                  (server.debug "Error closing the socket ~A while ~A: ~A" stream-socket (if interrupted "unwinding" "normally exiting") error)
                                                  (return-from closing))
-                                               'abort-server-request)
+                                               #'abort-request)
                    (server.dribble "Closing the socket")
                    (close stream-socket)))))
           (abort-server-request ()

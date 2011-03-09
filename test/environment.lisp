@@ -85,7 +85,7 @@
     (setf (handler-of server) handler)
     (if wait
         (startup-test-server-and-wait server)
-        (startup-test-server))))
+        (startup-test-server server))))
 
 (def function startup-test-server-with-brokers (brokers &rest args &key
                                                         (wait #t)
@@ -101,7 +101,7 @@
     (setf (brokers-of server) (ensure-list brokers))
     (if wait
         (startup-test-server-and-wait server)
-        (startup-test-server))))
+        (startup-test-server server))))
 
 (def function test-server-info-string (server)
   (bind ((listen-entry (first (listen-entries-of server)))

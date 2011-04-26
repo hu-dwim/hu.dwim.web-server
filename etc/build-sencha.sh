@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# example usage: $DWIM_WORKSPACE/hu.dwim.web-server/etc/build-sencha.sh $DWIM_WORKSPACE/ext-core-3.3.x/ --output-dir $DWIM_WORKSPACE/hu.dwim.web-server/www/libraries/"
+# example usage: $DWIM_WORKSPACE/hu.dwim.web-server/etc/build-sencha.sh $DWIM_WORKSPACE/ext-core-3.3.x/ --output-dir $DWIM_WORKSPACE/hu.dwim.web-server/www/libraries/
 
 absolutize ()
 {

@@ -53,7 +53,7 @@
   (:method (context (error serious-condition))
     (cond
       ((null *request*)
-       (server.info "Internal server error while the request it not yet parsed, so closing the socket as-is without sending any useful error message.")
+       (server.info "Internal server error while the request is not yet parsed, so closing the socket as-is without sending any useful error message.")
        (abort-server-request "HANDLE-TOPLEVEL-ERROR bailed out without any response because *request* was not yet parsed"))
       ((not (network-stream-has-been-written-to?))
        (handle-toplevel-error/emit-response context error)

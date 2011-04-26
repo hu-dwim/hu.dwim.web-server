@@ -393,12 +393,10 @@
          ((:values http-method raw-uri version-string major-version minor-version
                    uri headers)
           (with-error-log-decorator (make-error-log-decorator
-                                      (with-standard-io-syntax
-                                        (bind ((length-limit 2048)
-                                               (*print-length* length-limit)
-                                               (*print-readably* #f))
-                                          (format t "~%First ~S bytes of the request: " length-limit)
-                                          (write http-request-head-buffer))))
+                                      (bind ((length-limit 2048)
+                                             (*print-length* length-limit))
+                                        (format t "~%First ~S bytes of the request: " length-limit)
+                                        (write http-request-head-buffer)))
             (parse-http-request/head http-request-head-buffer)))
          (raw-content-length (header-alist-value headers +header/content-length+))
          (keep-alive? (and raw-content-length

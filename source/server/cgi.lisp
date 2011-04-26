@@ -8,6 +8,8 @@
 
 (in-package :hu.dwim.web-server)
 
+;; TODO add a timeout for the spawned processes and kill/abandon them if they don't finish in time
+
 (def (class* e) cgi-broker ()
   ((environment
     '()
@@ -183,6 +185,7 @@
       (cgi.dribble "Executing CGI file ~S, matched on script-path ~S, with timeout ~S" cgi-command-line script-path timeout)
       (bind ((final-environment (compute-cgi-environment environment script-path :extra-path extra-path :www-root www-root)))
         (cgi.debug "Executing CGI file matched on script-path ~S, temporary file will be ~S, with timeout ~S.~% * Command line: ~S~% * Input environment:~%     ~S~% * Final environment:~%     ~S. " script-path stdout/file timeout cgi-command-line environment (print-environment-to-string final-environment))
+        ;; TODO should be much simpler relying on iolib features, especially the timeout part...
         (bind ((process (iolib.os:create-process cgi-command-line
                                                  :stdin (iolib.streams:fd-of (client-stream-of *request*)) ; pass down a non-blocking fd (can't find anything about it in the standard though)
                                                  :stdout stdout/file
@@ -199,8 +202,8 @@
                     (iter
                       (with start-time = (get-monotonic-time))
                       (with deadline = (+ start-time timeout))
-                      (until (numberp exit-code))
                       (setf exit-code (iolib.os:process-status process :wait #f))
+                      (until (numberp exit-code))
                       (when (> (get-monotonic-time) deadline)
                         (cgi.error "Timeout on CGI file ~S after ~S sec, killing the child process." script-path timeout)
                         (iolib.os:process-kill process iolib.syscalls:sigkill)

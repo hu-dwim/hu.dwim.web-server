@@ -1,4 +1,4 @@
-HU.DWIM.WUI is public domain software:
+HU.DWIM.WEB-SERVER is public domain software:
 
   Authors dedicate this work to public domain, for the benefit of the
   public at large and to the detriment of the authors' heirs and
@@ -34,3 +34,6 @@ terms and conditions:
   CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
   TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+HU.DWIM.WEB-SERVER may use Sencha in certain configurations. It is
+licenced under GPL v3, see http://www.sencha.com/license .

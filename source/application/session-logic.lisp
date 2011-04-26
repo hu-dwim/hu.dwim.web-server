@@ -333,6 +333,7 @@
                                         (lambda (&key &allow-other-keys)
                                           (return-from noifying-session)))
             (with-lock-held-on-session (session :deadline deadline-timeout)
+              ;; TODO we probably want to call NOTIFY-SESSION-EXPIRATION even in case of a deadline expiration
               (notify-session-expiration application session))))))
     (with-thread-name " / calling PURGE-FRAMES on live sessions"
       (dolist (session live-sessions)

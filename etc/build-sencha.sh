@@ -91,4 +91,10 @@ echo
 # KLUDGE because of weird paths in ext-core.jsb2...
 ln --no-dereference --symbolic --force ../ "${EXT_HOME}/src/ext-core"
 
-java -jar /tmp/JSBuilder2.jar --projectFile "${EXT_HOME}/ext-core.jsb2" --homeDir "${OUTPUT_DIR}/sencha/"
+java -jar /tmp/JSBuilder2.jar --projectFile "${EXT_HOME}/ext-core.jsb2" --homeDir "${OUTPUT_DIR}/"
+
+wget -c http://downloads.sencha.com/extjs/ext-4.0-beta2.zip --output-document=/tmp/extjs.zip
+unzip /tmp/extjs.zip -d "${OUTPUT_DIR}/"
+
+wget -c http://extjs.cachefly.net/touch/sencha-touch-1.1.0.zip --output-document=/tmp/sencha-touch.zip
+unzip /tmp/sencha-touch.zip -d "${OUTPUT_DIR}/"

@@ -25,6 +25,9 @@
   ((host)
    (port)
    (ssl-certificate nil)
+   (ssl-key nil)
+   (ssl-key-password nil)
+   ;; temporary values initialized while server is running
    (socket nil)))
 
 (def print-object (server-listen-entry :identity #f :type #f)
@@ -57,10 +60,10 @@
       (slot-value server 'profile-request-processing?)
       (call-next-method)))
 
-(def constructor (server (listen-entries nil listen-entries-p) host port ssl-certificate)
-  (when (and (or host port ssl-certificate)
+(def constructor (server (listen-entries nil listen-entries-p) host port ssl-certificate ssl-key)
+  (when (and (or host port ssl-certificate ssl-key)
              listen-entries-p)
-    (error "Either use the :HOST, :PORT and :SSL-CERTIFICATE arguments or the full :LISTEN-ENTRIES version, but don't mix them"))
+    (error "Either use the :HOST, :PORT, :SSL-CERTIFICATE and :SSL-KEY arguments or the full :LISTEN-ENTRIES version, but don't mix them"))
   (cond
     (listen-entries-p
      (setf (listen-entries-of -self-) (mapcar (lambda (listen-entry)
@@ -72,7 +75,8 @@
      (setf (listen-entries-of -self-) (list (make-instance 'server-listen-entry
                                                            :host host
                                                            :port (or port 80)
-                                                           :ssl-certificate ssl-certificate))))))
+                                                           :ssl-certificate ssl-certificate
+                                                           :ssl-key ssl-key))))))
 
 (def function server/default-handler ()
   (handle-request *server* *request*))
@@ -118,8 +122,7 @@
           (assert listen-entries)
           (assert (not (find-if (complement #'null) listen-entries :key 'socket-of)) () "Some of the listen-entries of the server ~A already has a socket (lifecycle management got confused somehow)" server)
           (dolist (listen-entry listen-entries)
-            (bind ((host (host-of listen-entry))
-                   (port (port-of listen-entry)))
+            (bind (((:read-only-slots host port) listen-entry))
               (loop :named binding :do
                 (with-simple-restart (retry "Try opening the socket again on host ~S port ~S" host port)
                   (server.debug "Binding socket to host ~A, port ~A" host port)
@@ -250,18 +253,15 @@
                      (until (shutdown-initiated-p server))
                      (when (member :read event-types :test #'eq)
                        (server.debug "Acceptor multiplexer handled a :read event for fd ~A" fd)
-                       (bind ((listen-entry (aprog1
-                                                (find fd listen-entries :key [iolib:fd-of (socket-of !1)])
-                                              (unless it
-                                                (error "listen-entry not found for fd ~A?!" fd))))
-                              (socket (socket-of listen-entry)))
-                         (iter (for stream-socket = (iolib:accept-connection socket :wait #f))
-                               (while (and stream-socket
+                       (bind ((listen-entry (find fd listen-entries :key [iolib:fd-of (socket-of !1)])))
+                         (assert listen-entry () "listen-entry not found for fd ~A?!" fd)
+                         (iter (for client-stream/iolib = (iolib:accept-connection (socket-of listen-entry) :wait #f))
+                               (while (and client-stream/iolib
                                            (not (shutdown-initiated-p server))))
                                ;; TODO is this a constant or depends on server network load?
-                               (setf (iolib:socket-option stream-socket :receive-timeout) 15)
-                               ;; iolib streams are based on non-blocking fd's, so we don't need to (iolib.syscalls::%set-fd-nonblock stream-socket-fd #t)
-                               (worker-loop/serve-one-request threaded? server worker stream-socket)))))))
+                               (setf (iolib:socket-option client-stream/iolib :receive-timeout) 15)
+                               ;; iolib streams are based on non-blocking fd's, so we don't need to (iolib.syscalls::%set-fd-nonblock client-stream-fd #t)
+                               (worker-loop/serve-one-request threaded? server worker client-stream/iolib listen-entry)))))))
            (values)))
     (if threaded?
         (unwind-protect
@@ -280,94 +280,112 @@
               (make-worker server))))
         (body))))
 
-(def function worker-loop/serve-one-request (threaded? server worker stream-socket)
-  (flet ((serve-one-request ()
-           (server.dribble "Worker ~A is processing a request" worker)
-           (setf *request-remote-address* (iolib:remote-host stream-socket))
-           (setf *request-remote-address/string* (iolib:address-to-string *request-remote-address*))
-           (unwind-protect
-                (progn
-                  (with-lock-held-on-server (server)
-                    (incf (occupied-worker-count-of server))
-                    (bind ((worker-count (length (workers-of server))))
-                      (when (and threaded?
-                                 (= (occupied-worker-count-of server)
-                                    worker-count))
-                        (if (< worker-count
-                               (maximum-worker-count-of server))
-                            (progn
-                              (server.info "All ~A worker threads are occupied, starting a new one" worker-count)
-                              (make-worker server))
-                            (server.warn "All ~A worker threads are occupied, and can't start new workers due to having already MAXIMUM-WORKER-COUNT (~A) of them" worker-count (maximum-worker-count-of server)))))
-                    (setf *request-id* (processed-request-counter/increment server)))
-                  (with-thread-name (string+ " / serving request " (integer-to-string *request-id*))
-                    (setf *request* (read-request server stream-socket))
-                    (with-error-log-decorators ((make-error-log-decorator
-                                                  (format t "~%User agent: ~S" (header-value *request* +header/user-agent+)))
-                                                (make-error-log-decorator
-                                                  (format t "~%Request URL: ~S" (print-uri-to-string (uri-of *request*)))))
-                      (loop
-                        (with-simple-restart (retry-handling-request "Try again handling this HTTP request")
-                          (when (and *response*
-                                     (headers-are-sent-p *response*))
-                            (cerror "Continue even though some data was sent already" "Some data was already written to the network stream, so restarting the request handling will probably not result in what you would expect."))
-                          (setf *response* nil)
-                          (funcall (handler-of server))
-                          (return))))
-                    (close-request *request*)))
-             (with-lock-held-on-server (server)
-               (decf (occupied-worker-count-of server)))))
-         (handle-request-error (condition)
-           (incf (failed-request-count-of server))
-           (when (is-error-worth-logging? condition)
-             (server.error "Error while handling a server request in worker ~A on socket ~A: ~A" worker stream-socket condition))
-           ;; no need to worry about (nested) errors here, see WITH-LAYERED-ERROR-HANDLERS
-           (handle-toplevel-error *context-of-error* condition)
-           (server.dribble "HANDLE-TOPLEVEL-ERROR returned, worker continues..."))
-         (abort-request (&key reason &allow-other-keys)
-           (abort-server-request reason)))
-    (debug-only
-      (assert (notany #'boundp '(*server* *broker-stack* *request* *response* *request-remote-address* *request-remote-address/string* *request-id*
-                                 *matching-uri-path-element-stack* *matching-uri-path-element-stack/total-length* *matching-uri-path-element-stack/remaining-path*))))
-    (bind ((*server* server)
-           (*broker-stack* (list server))
-           (*request* nil)
-           (*response* nil)
-           (*request-remote-address* nil)
-           (*request-remote-address/string* nil)
-           (*request-id* nil)
-           (*matching-uri-path-element-stack* '())
-           (*matching-uri-path-element-stack/total-length* 0)
-           (*matching-uri-path-element-stack/remaining-path* nil))
-      (with-error-log-decorators
-          ((make-error-log-decorator
-             (format t "~%Request id: ~A" *request-id*))
-           (make-error-log-decorator
-             (format t "~%Remote host: ~A (~A)" *request-remote-address/string* (or (ignore-errors (nth-value 2 (iolib.sockets:lookup-hostname *request-remote-address*)))
-                                                                                    "?"))))
-        (restart-case
-            (unwind-protect-case (interrupted)
-                (bind ((swank::*sldb-quit-restart* (find-restart 'abort-server-request)))
-                  (with-layered-error-handlers (#'handle-request-error
-                                                #'abort-request
-                                                :ignore-condition-callback (lambda (error)
-                                                                             (is-error-from-client-stream? error stream-socket)))
-                    (serve-one-request))
-                  (server.dribble "Worker ~A finished processing a request, will close the socket now" worker))
-              (:always
-               (block closing
-                 (with-layered-error-handlers ((lambda (error &key &allow-other-keys)
-                                                 (declare (ignorable error))
-                                                 ;; let's not clutter the error log with non-interesting errors... (server.error (build-error-log-message :error-condition error :message (format nil "Failed to close the socket stream in SERVE-ONE-REQUEST while ~A the UNWIND-PROTECT block." (if interrupted "unwinding" "normally exiting"))))
-                                                 (server.debug "Error closing the socket ~A while ~A: ~A" stream-socket (if interrupted "unwinding" "normally exiting") error)
-                                                 (return-from closing))
-                                               #'abort-request)
-                   (server.dribble "Closing the socket")
-                   (close stream-socket)))))
-          (abort-server-request ()
-            :report (lambda (stream)
-                      (format stream "~@<Abort processing request ~A by simply closing the network socket~@:>" *request-id*))
-            (values)))))))
+(def function worker-loop/serve-one-request (threaded? server worker client-stream/iolib listen-entry)
+  (bind ((client-stream/ssl nil))
+    (flet ((serve-it ()
+             (server.dribble "Worker ~A is processing a request" worker)
+             (setf *request-remote-address* (iolib:remote-host client-stream/iolib))
+             (setf *request-remote-address/string* (iolib:address-to-string *request-remote-address*))
+             (unwind-protect
+                  (progn
+                    (with-lock-held-on-server (server)
+                      (incf (occupied-worker-count-of server))
+                      (bind ((worker-count (length (workers-of server))))
+                        (when (and threaded?
+                                   (= (occupied-worker-count-of server)
+                                      worker-count))
+                          (if (< worker-count
+                                 (maximum-worker-count-of server))
+                              (progn
+                                (server.info "All ~A worker threads are occupied, starting a new one" worker-count)
+                                (make-worker server))
+                              (server.warn "All ~A worker threads are occupied, and can't start new workers due to having already MAXIMUM-WORKER-COUNT (~A) of them" worker-count (maximum-worker-count-of server)))))
+                      (setf *request-id* (processed-request-counter/increment server)))
+                    (with-thread-name (string+ " / serving request " (integer-to-string *request-id*))
+                      (bind (((:read-only-slots ssl-certificate ssl-key ssl-key-password) listen-entry))
+                        (when ssl-key
+                          (server.debug "Wrapping stream ~A into an ssl server stream" client-stream/iolib)
+                          ;; TODO decide/make sure network and/or ssl handshaking related errors are properly ignored similar to is-error-from-client-stream?
+                          (setf client-stream/ssl (cl+ssl:make-ssl-server-stream (iolib.streams:fd-of client-stream/iolib)
+                                                                                 :external-format nil
+                                                                                 :certificate ssl-certificate
+                                                                                 :key ssl-key
+                                                                                 :password ssl-key-password)))
+                        (setf *request* (read-request server client-stream/iolib client-stream/ssl))
+                        (with-error-log-decorators ((make-error-log-decorator
+                                                      (format t "~%User agent: ~S" (header-value *request* +header/user-agent+)))
+                                                    (make-error-log-decorator
+                                                      (format t "~%Request URL: ~S" (print-uri-to-string (uri-of *request*)))))
+                          (loop
+                            (with-simple-restart (retry-handling-request "Try again handling this HTTP request")
+                              (when (and *response*
+                                         (headers-are-sent-p *response*))
+                                (cerror "Continue even though some data was sent already" "Some data was already written to the network stream, so restarting the request handling will probably not result in what you would expect."))
+                              (setf *response* nil)
+                              (funcall (handler-of server))
+                              (return)))))
+                      (close-request *request*)))
+               (with-lock-held-on-server (server)
+                 (decf (occupied-worker-count-of server)))))
+           (handle-request-error (condition)
+             (incf (failed-request-count-of server))
+             (when (is-error-worth-logging? condition)
+               (server.error "Error while handling a server request in worker ~A on socket ~A: ~A" worker client-stream/iolib condition))
+             ;; no need to worry about (nested) errors here, see WITH-LAYERED-ERROR-HANDLERS
+             (handle-toplevel-error *context-of-error* condition)
+             (server.dribble "HANDLE-TOPLEVEL-ERROR returned, worker continues..."))
+           (abort-request (&key reason &allow-other-keys)
+             (abort-server-request reason)))
+      (debug-only
+        (assert (notany #'boundp '(*server* *broker-stack* *request* *response* *request-remote-address* *request-remote-address/string* *request-id*
+                                   *matching-uri-path-element-stack* *matching-uri-path-element-stack/total-length* *matching-uri-path-element-stack/remaining-path*))))
+      (bind ((*server* server)
+             (*broker-stack* (list server))
+             (*request* nil)
+             (*response* nil)
+             (*request-remote-address* nil)
+             (*request-remote-address/string* nil)
+             (*request-id* nil)
+             (*matching-uri-path-element-stack* '())
+             (*matching-uri-path-element-stack/total-length* 0)
+             (*matching-uri-path-element-stack/remaining-path* nil))
+        (with-error-log-decorators
+            ((make-error-log-decorator
+               (format t "~%Request id: ~A" *request-id*))
+             (make-error-log-decorator
+               (format t "~%Remote host: ~A (~A)" *request-remote-address/string* (or (ignore-errors (nth-value 2 (iolib.sockets:lookup-hostname *request-remote-address*)))
+                                                                                      "?"))))
+          (restart-case
+              (unwind-protect-case (interrupted)
+                  (bind ((swank::*sldb-quit-restart* (find-restart 'abort-server-request)))
+                    (with-layered-error-handlers (#'handle-request-error
+                                                  #'abort-request
+                                                  :ignore-condition-callback (lambda (error)
+                                                                               (is-error-from-client-stream? error client-stream/iolib)))
+                      (serve-it))
+                    (server.dribble "Worker ~A finished processing a request, will close the socket now" worker))
+                (:always
+                 (block closing
+                   (with-layered-error-handlers ((lambda (error &key &allow-other-keys)
+                                                   (declare (ignorable error))
+                                                   ;; let's not clutter the error log with non-interesting errors... (server.error (build-error-log-message :error-condition error :message (format nil "Failed to close the socket stream in WORKER-LOOP/SERVE-ONE-REQUEST while ~A the UNWIND-PROTECT block." (if interrupted "unwinding" "normally exiting"))))
+                                                   (server.debug "Error closing the socket ~A while ~A: ~A" client-stream/iolib (if interrupted "unwinding" "normally exiting") error)
+                                                   (return-from closing))
+                                                 #'abort-request)
+                     (server.dribble "Closing the socket")
+                     (awhen (and *request*
+                                 (client-stream-of *request*))
+                       (finish-output it)
+                       (close it))
+                     (when (and client-stream/ssl
+                                (open-stream-p client-stream/ssl))
+                       (close client-stream/ssl))
+                     (when (open-stream-p client-stream/iolib)
+                       (close client-stream/iolib))))))
+            (abort-server-request ()
+              :report (lambda (stream)
+                        (format stream "~@<Abort processing request ~A by simply closing the network socket~@:>" *request-id*))
+              (values))))))))
 
 (def function store-response (response)
   ;; TODO i'm not too happy with this store-response. this is probably here because something is not clear around how responses are constructed and piped for sending...
@@ -386,10 +404,12 @@
     (iolib:socket-connection-reset-error (incf (client-connection-reset-count-of *server*))))
   (invoke-restart (find-restart 'abort-server-request)))
 
-(def method read-request ((server server) client-stream)
-  (bind ((client-fd (iolib.streams:fd-of client-stream))
-         (http-request-head-buffer (read-http-request/head client-fd :length-limit (or (length-limit/http-request-head-of server)
-                                                                                       *length-limit/http-request-head*)))
+(def method read-request ((server server) client-stream/iolib client-stream/ssl)
+  (bind ((client-fd (iolib.streams:fd-of client-stream/iolib))
+         (http-request-head-buffer (read-http-request/head client-fd client-stream/ssl (awhen client-stream/ssl
+                                                                                         (cl+ssl::ssl-stream-handle it))
+                                                           :length-limit (or (length-limit/http-request-head-of server)
+                                                                             *length-limit/http-request-head*)))
          ((:values http-method raw-uri version-string major-version minor-version
                    uri headers)
           (with-error-log-decorator (make-error-log-decorator
@@ -397,7 +417,7 @@
                                              (*print-length* length-limit))
                                         (format t "~%First ~S bytes of the request: " length-limit)
                                         (write http-request-head-buffer)))
-            (parse-http-request/head http-request-head-buffer)))
+            (parse-http-request/head http-request-head-buffer (to-boolean client-stream/ssl))))
          (raw-content-length (header-alist-value headers +header/content-length+))
          (keep-alive? (and raw-content-length
                            (parse-integer raw-content-length :junk-allowed #t)
@@ -408,7 +428,11 @@
                    :raw-uri raw-uri
                    :uri uri
                    :keep-alive keep-alive?
-                   :client-stream client-stream
+                   :client-stream (if client-stream/ssl
+                                      (flexi-streams:make-flexi-stream client-stream/ssl :external-format '(:utf-8 :eol-style :lf))
+                                      client-stream/iolib)
+                   :client-stream/iolib client-stream/iolib
+                   :client-stream/ssl client-stream/ssl
                    :query-parameters (query-parameters-of uri) ; will only contain params coming in the http body after calling ENSURE-HTTP-REQUEST-BODY-IS-PARSED
                    :http-method http-method
                    :http-version-string version-string
@@ -441,7 +465,7 @@
                    *request-id* seconds (/ bytes-allocated 1024 1024) *request-remote-address/string* raw-uri)))))
 
 (def (function e) is-request-still-valid? ()
-  (iolib:socket-connected-p (client-stream-of *request*)))
+  (iolib:socket-connected-p (client-stream/iolib-of *request*)))
 
 (def (function e) abort-request-unless-still-valid ()
   (unless (is-request-still-valid?)
@@ -545,7 +569,8 @@
                                     cookies
                                     content-disposition
                                     (stream (client-stream-of *request*))
-                                    (encoding (encoding-name-of (iolib:external-format-of stream)))
+                                    ;; TODO should read from the stream? it can be a flexi-stream here due to ssl... (encoding (encoding-name-of (iolib:external-format-of stream)))
+                                    (encoding +default-encoding+)
                                     seconds-until-expires)
   "Write SEQUENCE into the network stream. SEQUENCE may be a string or a byte vector. When it's a string it will be encoded using the current external-format of the network stream."
   (check-type input (or list (vector (unsigned-byte 8) *) string))

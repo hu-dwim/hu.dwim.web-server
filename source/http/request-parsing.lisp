@@ -20,7 +20,7 @@
         (fail-unless (= (length version-string) end-position))
         (values major-version minor-version)))))
 
-(def (function o) read-http-request/head (client-fd &key (length-limit *length-limit/http-request-head*))
+(def (function o) read-http-request/head (client-fd client-stream/ssl ssl-stream-handle &key (length-limit *length-limit/http-request-head*))
   (check-type length-limit (integer 512))
   (bind ((buffer-length length-limit)
          (buffer/lisp (make-array buffer-length :element-type '(unsigned-byte 8)))
@@ -39,15 +39,21 @@
           (error 'iolib.syscalls:etimedout :handle client-fd :message "READ-HTTP-REQUEST/HEAD timed out"))
         (when (>= position buffer-length)
           (request-length-limit-reached 'read-http-request/head buffer-length position))
-        (for bytes-read = (handler-case
-                              (iolib.syscalls:read client-fd
-                                                   (cffi-sys:inc-pointer buffer position)
-                                                   ;; we can read as many bytes as the number of bytes left in the marker
-                                                   (- marker-length marker-position))
-                            (iolib.syscalls:ewouldblock ()
-                              ;; TODO implement the call/cc based multiplexer and get rid of this...
-                              (sleep 0.1)
-                              (next-iteration))))
+        (for bytes-read = (bind ((bytes-to-read (- marker-length marker-position)) ; we can read as many bytes as the number of bytes left in the marker
+                                 (read-buffer-pointer (cffi-sys:inc-pointer buffer position)))
+                            (if ssl-stream-handle
+                                (cl+ssl::ensure-ssl-funcall client-stream/ssl
+                                                            ssl-stream-handle
+                                                            #'cl+ssl::ssl-read
+                                                            ssl-stream-handle
+                                                            read-buffer-pointer
+                                                            bytes-to-read)
+                                (handler-case
+                                    (iolib.syscalls:read client-fd read-buffer-pointer bytes-to-read)
+                                  (iolib.syscalls:ewouldblock ()
+                                    ;; TODO implement the call/cc based multiplexer and get rid of this...
+                                    (sleep 0.1)
+                                    (next-iteration))))))
         (assert (integerp bytes-read))
         (iter
           (repeat bytes-read)
@@ -58,7 +64,7 @@
           (incf position))))
     (shrink-vector buffer/lisp position)))
 
-(def (function o) parse-http-request/head (buffer)
+(def (function o) parse-http-request/head (buffer https?)
   (handler-bind ((uri-parse-error (lambda (error)
                                     (illegal-http-request/error (princ-to-string error)))))
     (bind (((:values http-method raw-uri version-string position) (parse-http-request-line buffer)))
@@ -71,7 +77,7 @@
         (bind ((host (or (assoc-value headers "Host" :test #'equal)
                          (illegal-http-request/error "No \"Host\" header in the request")))
                (host-length (length host))
-               (scheme "http")        ; TODO
+               (scheme (if https? "https" "http"))
                (scheme-length (length scheme))
                (uri-string (bind ((position 0)
                                   (result (make-string (+ scheme-length #.(length "://") host-length raw-uri-length)

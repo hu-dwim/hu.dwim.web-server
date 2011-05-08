@@ -101,17 +101,32 @@
 
 (def method send-response :around ((response primitive-http-response))
   (store-response response)
-  (bind ((client-stream (client-stream-of *request*))
-         (new-external-format (external-format-of response))
-         (original-external-format (iolib:external-format-of client-stream)))
-    (http.debug "Sending primitive response ~A, new external-format ~A, original external-format ~A" response new-external-format original-external-format)
-    (if new-external-format
-        (unwind-protect
-             (progn
-               (setf (iolib:external-format-of client-stream) new-external-format)
-               (call-next-method))
-          (setf (iolib:external-format-of client-stream) original-external-format))
-        (call-next-method))))
+
+  (call-next-method)
+  ;; KLUDGE reconsider this. do we really need all this fooling around with dynamic external formats?
+  #+nil
+  (flet ((set-external-format (stream external-format)
+           (etypecase stream
+             (iolib.sockets:stream-socket (setf (iolib:external-format-of stream) external-format))
+             (flexi-streams:flexi-stream (setf (flexi-streams:flexi-stream-external-format stream)
+                                               (if (typep external-format 'flexi-streams::external-format)
+                                                   external-format
+                                                   (flexi-streams:make-external-format external-format))))))
+         (get-external-format (stream)
+           (etypecase stream
+             (iolib.sockets:stream-socket (iolib:external-format-of stream))
+             (flexi-streams:flexi-stream (flexi-streams:flexi-stream-external-format stream)))))
+    (bind ((client-stream (client-stream-of *request*))
+           (new-external-format (external-format-of response))
+           (original-external-format (get-external-format client-stream)))
+      (http.debug "Sending primitive response ~A, new external-format ~A, original external-format ~A" response new-external-format original-external-format)
+      (if new-external-format
+          (unwind-protect
+               (progn
+                 (set-external-format client-stream new-external-format)
+                 (call-next-method))
+            (set-external-format client-stream original-external-format))
+          (call-next-method)))))
 
 (def method send-response ((response primitive-http-response))
   (assert (not (headers-are-sent-p response)) () "The headers of ~A have already been sent, this is a program error." response)

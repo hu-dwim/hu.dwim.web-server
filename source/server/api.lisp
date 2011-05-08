@@ -56,7 +56,9 @@
    (cookies :documentation "An alist cache of the parsed Cookie header value. Its accessor lazily initializes the slot.")))
 
 (def (class* eas) http-request (http-message request)
-  ((client-stream :type stream :documentation "A bivalent output stream that delivers data *to* the http client.")
+  ((client-stream :type stream :documentation "A main bivalent output stream that delivers data *to* the http client.")
+   (client-stream/iolib :type stream :documentation "The underlying iolib stream.")
+   (client-stream/ssl :type stream :documentation "An optional bivalent SSL wrapper stream wrapping CLIENT-STREAM/IOLIB.")
    (keep-alive :initform #t :type boolean :accessor keep-alive?)
    (http-method :type string)
    (http-version-string :type string)
@@ -66,6 +68,9 @@
    (uri :type uri)
    (query-parameters :type list :documentation "Holds all the query parameters from the uri and/or the request body")
    (accept-encodings :type list :documentation "An alist cache of the parsed ACCEPT-ENDODINGS header value. Its accessor lazily initializes the slot.")))
+
+(def (function e) https-request? (request)
+  (to-boolean (client-stream/ssl-of request)))
 
 (def (generic e) header-value (http-message header-name)
   (:method ((message http-message) header-name)
@@ -100,8 +105,8 @@ CONTEXT is usually (first *brokers*) but can be any contextual information inclu
 
 (def (generic e) shutdown-server (server &key &allow-other-keys))
 
-(def generic read-request (server stream)
-  (:method :around (server stream)
+(def generic read-request (server stream/iolib stream/ssl)
+  (:method :around (server stream/iolib stream/ssl)
     (with-thread-name " / READ-REQUEST"
       (call-next-method))))
 

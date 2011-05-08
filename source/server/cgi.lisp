@@ -187,7 +187,8 @@
         (cgi.debug "Executing CGI file matched on script-path ~S, temporary file will be ~S, with timeout ~S.~% * Command line: ~S~% * Input environment:~%     ~S~% * Final environment:~%     ~S. " script-path stdout/file timeout cgi-command-line environment (print-environment-to-string final-environment))
         ;; TODO should be much simpler relying on iolib features, especially the timeout part...
         (bind ((process (iolib.os:create-process cgi-command-line
-                                                 :stdin (iolib.streams:fd-of (client-stream-of *request*)) ; pass down a non-blocking fd (can't find anything about it in the standard though)
+                                                 ;; FIXME this is broken with https
+                                                 :stdin (iolib.streams:fd-of (client-stream/iolib-of *request*)) ; pass down a non-blocking fd (can't find anything about it in the standard though)
                                                  :stdout stdout/file
                                                  :stderr stderr/file
                                                  :environment final-environment

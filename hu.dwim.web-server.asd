@@ -17,6 +17,7 @@
                :bordeaux-threads
                :cffi
                :cl-fad ; TODO replace with iolib
+               :cl+ssl
                :hu.dwim.common
                :hu.dwim.computed-class+hu.dwim.defclass-star
                :hu.dwim.def.namespace

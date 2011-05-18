@@ -69,7 +69,7 @@
    (query-parameters :type list :documentation "Holds all the query parameters from the uri and/or the request body")
    (accept-encodings :type list :documentation "An alist cache of the parsed ACCEPT-ENDODINGS header value. Its accessor lazily initializes the slot.")))
 
-(def (function e) https-request? (request)
+(def (function e) https-request? (&optional (request *request*))
   (to-boolean (client-stream/ssl-of request)))
 
 (def (generic e) header-value (http-message header-name)

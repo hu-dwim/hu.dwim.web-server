@@ -49,6 +49,7 @@
    (lock (make-recursive-lock "hu.dwim.web-server server lock"))
    (shutdown-initiated #f :type boolean)
    (workers (make-adjustable-vector 16) :type sequence)
+   (worker-id (make-atomic-counter))
    (maximum-worker-count 16 :type integer :export :accessor)
    (occupied-worker-count 0 :type integer) ; only accessed while having the lock on the server, so doesn't need to be atomic
    (started-at nil :type local-time:timestamp)
@@ -223,7 +224,7 @@
       (setf (thread-of worker)
             (make-thread (lambda ()
                            (worker-loop server #t worker))
-                         :name (format nil "http worker ~a" (length (workers-of server)))))
+                         :name (format nil "http worker ~a" (atomic-counter/increment (worker-id-of server)))))
       (register-worker worker server)
       (server.info "Spawned new worker thread ~A" worker)
       worker)))

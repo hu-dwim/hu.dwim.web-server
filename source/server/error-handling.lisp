@@ -20,10 +20,15 @@
                                         :include-backtrace include-backtrace
                                         :timestamp (local-time:now)))
 
-(def function is-error-from-client-stream? (error client-stream)
-  (bind ((client-stream-fd (iolib:fd-of client-stream)))
-    (or (and (typep error 'stream-error)
-             (eq (stream-error-stream error) client-stream))
+(def function is-error-from-client-stream? (error client-stream/iolib)
+  (bind ((client-stream-fd (iolib:fd-of client-stream/iolib)))
+    (or (and (typep error 'cl+ssl::ssl-error-zero-return)
+             ;; TODO this is fragile and will most probably change in cl+ssl
+             (bind ((ssl-handle (cl+ssl::ssl-error-handle error))
+                    (fd-of-error (cl+ssl::ssl-get-fd ssl-handle)))
+               (eql fd-of-error client-stream-fd)))
+        (and (typep error 'stream-error)
+             (eq (stream-error-stream error) client-stream/iolib))
         ;; TODO the rest is fragile and easily breaks when iolib changes behavior
         ;; TODO follow iolib when it gets the condition cleanup
         ;; TODO signalling non stream-error conditions from stream operations might be an iolib bug

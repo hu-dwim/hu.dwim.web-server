@@ -9,6 +9,28 @@
 ;; TODO use iolib for file operations
 
 ;;;;;;
+;;; File serving broker
+
+(def (class* e) file-serving-broker (broker-at-path)
+  ((file-to-serve
+    :unbound
+    :type iolib.pathnames:file-path)
+   (path-does-not-exists-response-factory (lambda (&key &allow-other-keys)
+                                            (make-not-found-response)))))
+
+(def method produce-response ((broker file-serving-broker) (request http-request))
+  (bind ((file-to-serve (file-to-serve-of broker))
+         (path (path-of broker)))
+    (server.debug "PRODUCE-RESPONSE for ~A, file-to-serve ~A" broker file-to-serve)
+    (if (iolib.os:regular-file-exists-p file-to-serve)
+        ;; TODO that stat call should be factored out somewhere
+        (make-file-serving-response (namestring file-to-serve) :last-modified-at (local-time:unix-to-timestamp (iolib.syscalls:stat-mtime (iolib.syscalls:stat (iolib.pathnames:file-path-namestring file-to-serve)))))
+        (funcall (path-does-not-exists-response-factory-of broker)
+                 :broker broker
+                 :path path
+                 :file-to-serve file-to-serve))))
+
+;;;;;;
 ;;; Directory serving broker cache entry
 
 (def class* directory-serving-broker/cache-entry ()

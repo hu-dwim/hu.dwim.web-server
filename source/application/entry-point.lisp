@@ -118,6 +118,7 @@
                (collect `(def (entry-point ,@-options-) (,application ,@entry)))))))
 
 (def (definer e) file-serving-entry-point (application path-prefix root-directory &key priority)
+  ;; TODO it should dispatch on (cl-fad:directory-pathname-p root-directory) to chose the type, but at macroexpand time root-directory can be a form, not only a pathname
   `(def (entry-point ,@-options-) (,application directory-serving-broker
                                                 :path-prefix ,path-prefix
                                                 :root-directory ,root-directory

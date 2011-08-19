@@ -17,7 +17,7 @@
 (defun $ (id)
   (return (dojo.byId id)))
 
-(defun hdws.addOnLoad (function)
+(defun hdws.add-on-load (function)
   (dojo.addOnLoad function))
 
 (defun hdws.connect (objects event function)

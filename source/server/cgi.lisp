@@ -189,7 +189,7 @@
         (bind ((process (iolib.os:create-process cgi-command-line
                                                  :stdin (if (https-request?)
                                                             nil ;; TODO cgi over https needs iolib support, or a pipe. (client-stream/ssl-of *request*)
-                                                            (iolib.streams:fd-of (client-stream/iolib-of *request*))) ; pass down a non-blocking fd (can't find anything about it in the standard though)
+                                                            (iolib.streams:fd-of (client-stream/iolib-of *request*))) ; pass down a non-blocking fd (can't find anything about blockingness in the standard though)
                                                  :stdout stdout/file
                                                  :stderr stderr/file
                                                  :environment final-environment

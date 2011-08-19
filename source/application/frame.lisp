@@ -15,6 +15,7 @@
           0)
       (random-string +frame-index-length+)))
 
+;; TODO abstract away hu.dwim.presentation component dependency
 (def class* frame (string-id-mixin activity-monitor-mixin)
   ((session nil :type session)
    (unique-counter 0 :type integer)

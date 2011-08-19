@@ -77,6 +77,7 @@
   (if root-directory
       (bind ((root-directory (iolib.pathnames:file-path root-directory)))
         (if (iolib.os:directory-exists-p root-directory)
+            ;; TODO comment on this symlink resolve! probably a security safety net against fooling around with symlinks after the server has been started
             (setf root-directory (iolib.os:resolve-file-path root-directory))
             (warn "Root directory ~A specified for ~A does not exist!" root-directory self))
         (apply #'call-next-method self slot-names :root-directory root-directory
@@ -149,6 +150,7 @@
                                    (default-response-compression)))
            (cache (cache-of broker))
            (cache-key (make-directory-serving-broker/cache-key broker absolute-file-path response-compression))
+           ;; TODO use iolib.syscalls:stat and iolib.syscalls:mtime?
            (file-write-date/on-disk (file-write-date (iolib.pathnames:file-path-namestring absolute-file-path)))
            (cache-entry nil)
            (cache-entry-found? #f))

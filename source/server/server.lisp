@@ -250,15 +250,16 @@
                (until (shutdown-initiated-p server))
                ;; (server.dribble "Acceptor multiplexer ticked")
                (iter (for (fd event-types) :in (iomux::harvest-events mux 1))
-                     (server.dribble "Acceptor multiplexer returned with fd ~A, events ~S" fd event-types)
+                     (server.dribble "Acceptor multiplexer returned for fd ~S, events ~S" fd event-types)
                      (until (shutdown-initiated-p server))
                      (when (member :read event-types :test #'eq)
-                       (server.debug "Acceptor multiplexer handled a :read event for fd ~A" fd)
+                       (server.debug "Acceptor multiplexer got a :read event for listen fd ~S" fd)
                        (bind ((listen-entry (find fd listen-entries :key [iolib:fd-of (socket-of !1)])))
                          (assert listen-entry () "listen-entry not found for fd ~A?!" fd)
                          (iter (for client-stream/iolib = (iolib:accept-connection (socket-of listen-entry) :wait #f))
                                (while (and client-stream/iolib
                                            (not (shutdown-initiated-p server))))
+                               (server.dribble "Acceptor multiplexer accepted the connection ~A, fd ~S" client-stream/iolib (iolib.streams:fd-of client-stream/iolib))
                                ;; TODO is this a constant or depends on server network load?
                                (setf (iolib:socket-option client-stream/iolib :receive-timeout) 15)
                                ;; iolib streams are based on non-blocking fd's, so we don't need to (iolib.syscalls::%set-fd-nonblock client-stream-fd #t)

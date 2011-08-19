@@ -9,8 +9,7 @@
 ;;;;;;
 ;;; HTTP port
 
-;; TODO move to meta-model or somewhere else.
-;; because this is not general enough, and can not be project independent: https, or not, starting multiple services on multiple ports, same service listening on multiple ports, etc...
+;; KLUDGE move to meta-model or somewhere else because this is not general enough, and can not be project independent: https, or not, starting multiple services on multiple ports, same service listening on multiple ports, etc...
 (def (constant e) +default-http-server-port+ 8080)
 
 (def (constant e) +http-server-port-command-line-option+
@@ -21,4 +20,5 @@
 
 (def (function e) process-http-server-port-command-line-argument (arguments server)
   (when-bind http-server-port (getf arguments :http-server-port)
+    ;; KLUDGE this is fragile, and the whole thing is more complicated
     (setf (port-of (find +default-http-server-port+ (listen-entries-of server) :key #'port-of)) http-server-port)))

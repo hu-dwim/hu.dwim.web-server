@@ -703,7 +703,7 @@
                                     (signal-errors #t)
                                     &allow-other-keys)
   (with-thread-name " / SERVE-FILE"
-    (remove-from-plistf args :signal-errors)
+    (remove-from-plistf args :signal-errors :for-download)
     (bind ((client-stream-dirty? #f))
       (handler-bind ((serious-condition (lambda (error)
                                           (unless signal-errors

@@ -337,6 +337,15 @@
 ;;;;;;
 ;;; MIME stuff for serving static files
 
+(def special-variable *mime-type->for-download* (make-hash-table :test #'equal))
+
+(def (function e) mime-time-for-download? (mime-type)
+  (values (gethash mime-type *mime-type->for-download*)))
+
+(def (function e) (setf mime-time-for-download?) (value mime-type)
+  (check-type value boolean)
+  (setf (gethash mime-type *mime-type->for-download*) value))
+
 (def special-variable *mime-type->extensions* (make-hash-table :test #'equal))
 (def special-variable *extension->mime-types* (make-hash-table :test #'equal))
 (def constant +mime-types-file+ #P"/etc/mime.types")

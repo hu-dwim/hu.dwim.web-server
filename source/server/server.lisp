@@ -691,8 +691,8 @@
 (def function serve-file (file-name &rest args &key
                                     (last-modified-at (local-time:universal-to-timestamp
                                                        (file-write-date file-name)))
-                                    (content-type nil content-type-p)
-                                    (for-download #f)
+                                    (content-type nil content-type/provided?)
+                                    (for-download #f for-download/provided?)
                                     (content-disposition-filename nil content-disposition-filename-p)
                                     headers
                                     cookies
@@ -709,36 +709,32 @@
                                           (unless signal-errors
                                             (server.warn "SERVE-FILE muffles the following error due to :signal-errors #f: ~A" error)
                                             (return-from serve-file (values #f error client-stream-dirty?))))))
-        (with-open-file (file file-name :direction :input :element-type '(unsigned-byte 8))
-          (unless for-download
-            (unless content-type-p
-              (setf content-type (or content-type
-                                     (switch ((pathname-type file-name) :test #'string=)
-                                       ;; this special-casing is an optimization to cons less
-                                       ("html" (content-type-for +html-mime-type+ encoding))
-                                       ("xml"  (content-type-for +xml-mime-type+ encoding))
-                                       ("css"  (content-type-for +css-mime-type+ encoding))
-                                       ("csv"  (content-type-for +csv-mime-type+ encoding))
-                                       (t (or (first (awhen (pathname-type file-name)
-                                                       (mime-types-for-extension it)))
-                                              (content-type-for +plain-text-mime-type+ encoding)))))))
-            (unless content-disposition-filename-p
-              (setf content-disposition-filename (string+ (pathname-name file-name)
-                                                          (awhen (pathname-type file-name)
-                                                            (string+ "." it))))))
-          (setf client-stream-dirty? #t)
-          (apply 'serve-stream
-                 file
-                 :last-modified-at last-modified-at
-                 :content-type content-type
-                 :content-disposition-filename content-disposition-filename
-                 :content-disposition-size content-disposition-size
-                 :seconds-until-expires seconds-until-expires
-                 :headers headers
-                 :cookies cookies
-                 :stream stream
-                 (append
-                  (unless for-download
-                    (list :content-disposition nil))
-                  args))
-          (values #t nil #f))))))
+        (bind ((mime-type (first (awhen (pathname-type file-name)
+                                   (mime-types-for-extension it)))))
+          (unless content-type/provided?
+            (setf content-type (or (content-type-for mime-type encoding)
+                                   (content-type-for +plain-text-mime-type+ encoding))))
+          (when (and mime-type
+                     (not for-download/provided?))
+            (setf for-download (mime-time-for-download? mime-type)))
+          (unless content-disposition-filename-p
+            (setf content-disposition-filename (string+ (pathname-name file-name)
+                                                        (awhen (pathname-type file-name)
+                                                          (string+ "." it)))))
+          (with-open-file (file file-name :direction :input :element-type '(unsigned-byte 8))
+            (setf client-stream-dirty? #t)
+            (apply 'serve-stream
+                   file
+                   :last-modified-at last-modified-at
+                   :content-type content-type
+                   :content-disposition-filename content-disposition-filename
+                   :content-disposition-size content-disposition-size
+                   :seconds-until-expires seconds-until-expires
+                   :headers headers
+                   :cookies cookies
+                   :stream stream
+                   (append
+                    (unless for-download
+                      (list :content-disposition nil))
+                    args))
+            (values #t nil #f)))))))

@@ -337,7 +337,7 @@
 ;;;;;;
 ;;; MIME stuff for serving static files
 
-(def special-variable *mime-type->for-download* (make-hash-table :test #'equal))
+(def special-variable *mime-type->for-download* nil)
 
 (def (function e) mime-time-for-download? (mime-type)
   (values (gethash mime-type *mime-type->for-download*)))
@@ -345,6 +345,14 @@
 (def (function e) (setf mime-time-for-download?) (value mime-type)
   (check-type value boolean)
   (setf (gethash mime-type *mime-type->for-download*) value))
+
+(def function reinitialize/mime-type->for-download ()
+  (setf *mime-type->for-download* (make-hash-table :test #'equal))
+  (dolist (mime-type '("text/x-vcard"))
+    (setf (mime-time-for-download? mime-type) #t))
+  (values))
+
+(reinitialize/mime-type->for-download)
 
 (def special-variable *mime-type->extensions* (make-hash-table :test #'equal))
 (def special-variable *extension->mime-types* (make-hash-table :test #'equal))

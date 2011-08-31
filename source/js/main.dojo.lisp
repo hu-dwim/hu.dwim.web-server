@@ -148,7 +148,6 @@
                                                     #.(escape-as-uri +ajax-aware-parameter-name+)
                                                     (if ajax "t" "")))
          (form (aref document.forms 0)))
-    (hdws.save-scroll-position "content")
     (if ajax
         (bind ((ajax-target (dojo.byId subject-dom-node))
                (ajax-indicator-teardown nil))
@@ -534,27 +533,6 @@
                link.href)
       (bind ((href (.replace link.href (regexp "(&|\\?)forceReload=\\d+") "")))
         (setf link.href (hdws.append-query-parameter href "forceReload" (.valueOf (new Date))))))))
-
-;;;;;;
-;;; scroll
-
-(defun hdws.reset-scroll-position ((content :by-id))
-  (when content
-    (bind ((form (aref document.forms 0))
-           (sx (aref form #.+scroll-x-parameter-name+))
-           (sy (aref form #.+scroll-y-parameter-name+)))
-      (log.debug "Restoring scroll position: " sx.value sy.value)
-      (setf content.scrollLeft sx.value)
-      (setf content.scrollTop sy.value))))
-
-(defun hdws.save-scroll-position ((content :by-id))
-  (when content
-    (bind ((form (aref document.forms 0))
-           (sx (aref form #.+scroll-x-parameter-name+))
-           (sy (aref form #.+scroll-y-parameter-name+)))
-      (log.debug "Saving scroll position: " content.scrollLeft content.scrollTop)
-      (setf sx.value content.scrollLeft)
-      (setf sy.value content.scrollTop))))
 
 ;;;;;;
 ;;; i18n

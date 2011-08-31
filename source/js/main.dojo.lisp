@@ -354,9 +354,7 @@
   ;; Makes an XMLHTTP-received node suitable for inclusion in the document.
   (log.debug "Importing ajax answer node with id " (.getAttribute node "id"))
   (cond
-    (dojo.isMozilla
-     (return node))
-    ((or dojo.isChrome dojo.isOpera dojo.isSafari)
+    ((or dojo.isMozilla dojo.isChrome dojo.isOpera dojo.isSafari)
      (return (document.importNode node true)))
     (dojo.isIE
      ;; ie is randomly dropping the script tags (m$ is as lame as usual...)

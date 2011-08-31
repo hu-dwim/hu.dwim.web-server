@@ -53,6 +53,11 @@
 (def (function ei) generate-unique-string/frame (&optional prefix frame)
   (generate-unique-string (or prefix "f") (or frame *frame*)))
 
+(def (function ei) generate-unique-string/frame-or-response (&optional prefix)
+  (if *frame*
+      (generate-unique-string/frame prefix *frame*)
+      (generate-unique-string/response prefix *response*)))
+
 (def function %expand-with-unique-strings (generator names body)
   `(let ,(mapcar (lambda (name)
                    (bind (((:values symbol string) (etypecase name

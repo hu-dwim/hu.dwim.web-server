@@ -299,12 +299,16 @@
     (foreach #'connect-one handlers)))
 
 ;; open dojo issue about (sometimes defaulting) node.type taking precedence over node.dojoType: http://bugs.dojotoolkit.org/ticket/10951
-(defun hdws.io.instantiate-dojo-widgets (widget-ids)
-  (log.debug "Instantiating (and destroying previous versions of) the following widgets " widget-ids)
-  (dolist (widget-id widget-ids)
-    (awhen (dijit.byId widget-id)
-      (.destroyRecursive it)))
-  (dojo.parser.instantiate (hdws.map dojo.byId widget-ids)))
+(defun hdws.io.instantiate-dojo-widgets (widget-entries)
+  (log.debug "Instantiating (and destroying previous versions of) the following widgets " widget-entries)
+  (dolist (entry widget-entries)
+    (bind ((dom-node ($ entry.node))
+           (dojo-type entry.type))
+      (assert dom-node "DOM node is null at widget instantiation for " entry ". Make sure you render the -id- on a tab in EMIT-DOJO-WIDGET!")
+      (setf entry.node dom-node)
+      (awhen (dijit.byId dom-node.id)
+        (.destroyRecursive it))))
+  (dojo.parser.instantiate widget-entries (create :fastpath true)))
 
 (defun hdws.io.postprocess-inserted-node (original-node imported-node)
   ;; this used to be needed before WITH-COLLAPSED-JS-SCRIPTS started to collect all js fragments into a toplevel script node in the ajax answer. might come handy for something later, so leave it for now...

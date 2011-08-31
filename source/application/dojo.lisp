@@ -42,7 +42,7 @@
 ;;;;;;
 ;;; Rendering
 
-(def special-variable *dojo-widget-ids*)
+(def special-variable *dojo-widgets*)
 
 (macrolet ((x (&body entries)
              `(progn
@@ -91,25 +91,44 @@
 (pushnew 'dojo-widget-collector/wrapper *xhtml-body-environment-wrappers*)
 
 (def function dojo-widget-collector/wrapper (thunk)
-  (bind ((*dojo-widget-ids* '()))
+  (bind ((*dojo-widgets* '()))
     (multiple-value-prog1
         (funcall thunk)
-      (when *dojo-widget-ids*
-        ;; NOTE: instantiation must happend before any other js code tinkers with the dojo widgets,
+      (when *dojo-widgets*
+        ;; NOTE: instantiation must happen before any other js code tinkers with the dojo widgets,
         ;; therefore we wrap here again with the js script collapser to emit us before the parent
         ;; WITH-XHTML-BODY-ENVIRONMENT emits the rest of the js stuff.
         `xml,@(with-xhtml-body-environment (:wrappers '(js-script-collapser/wrapper))
                 `js(on-load
-                    ;; using `js-onload here is a no go (ordering issue)
-                    (hdws.io.instantiate-dojo-widgets (array ,@*dojo-widget-ids*))))))))
+                    (hdws.io.instantiate-dojo-widgets
+                     (array ,@(iter (for entry :in *dojo-widgets*)
+                                    (bind (((id dojo-type &rest dojo-properties) entry))
+                                      (collect (if dojo-properties
+                                                   `js-piece(create :node ,id
+                                                                    :type ,dojo-type
+                                                                    :inherited (create
+                                                                                ,@(iter (for (name value) :on dojo-properties :by #'cddr)
+                                                                                        ;; we would render a js null here otherwise, and there's no (easy?) way to differentiate
+                                                                                        ;; between the two situations, so just drop the whole thing...
+                                                                                        (when value
+                                                                                          (collect (if (keywordp name)
+                                                                                                       (string-downcase (symbol-name name))
+                                                                                                       name))
+                                                                                          (collect value)))))
+                                                   `js-piece(create :node ,id
+                                                                    :type ,dojo-type)))))))))))))
 
-(def macro render-dojo-widget ((&optional (id '(generate-unique-string/frame "_w")))
-                                &body body)
-  (once-only (id)
-    `(progn
-       ,@body
-       (push ,id *dojo-widget-ids*)
-       (values))))
+(def (with-macro* e) render-dojo-widget (dojo-type &optional (dojo-properties '()) &key (id (generate-unique-string/frame-or-response "_w")))
+  (multiple-value-prog1
+      (-with-macro/body- (id '-id-))
+    (push (list* id dojo-type dojo-properties) *dojo-widgets*)))
+
+#+() ; TODO decide about this
+(def (function e) render-dojo-widget* (dojo-type &optional (dojo-properties '()) &key (id (generate-unique-string/frame-or-response "_w")))
+  (render-dojo-widget (dojo-type dojo-properties :id id)
+    <div (:id ,-id-)>))
+
+;; TODO cleanup the stuff below
 
 (def (macro e) render-dojo-dialog ((id-var &key title (width "400px") (attach-point '`js-piece(slot-value document.body ,(generate-unique-string/frame))))
                                     &body body)
@@ -140,6 +159,7 @@
 (def (macro e) render-dojo-button (label &key on-click)
   `(render-dojo-widget* (+dijit/button+ :label ,label :on-click ,on-click)))
 
+#+ () ; TODO delme
 (def (macro e) render-dojo-widget* ((dojo-type &rest attributes &key id (xml-element-name "span")
                                                &allow-other-keys)
                                      &body body)

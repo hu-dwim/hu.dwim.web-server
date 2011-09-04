@@ -242,45 +242,46 @@
   (with-lock-held-on-server (server)
     ;; wait until the startup procedure finished
     )
-  (flet ((body ()
-           (bind ((mux (connection-multiplexer-of server))
-                  (listen-entries (listen-entries-of server)))
-             (assert mux)
-             (iter
-               (until (shutdown-initiated-p server))
-               ;; (server.dribble "Acceptor multiplexer ticked")
-               (iter (for (fd event-types) :in (iomux::harvest-events mux 1))
-                     (server.dribble "Acceptor multiplexer returned for fd ~S, events ~S" fd event-types)
-                     (until (shutdown-initiated-p server))
-                     (when (member :read event-types :test #'eq)
-                       (server.debug "Acceptor multiplexer got a :read event for listen fd ~S" fd)
-                       (bind ((listen-entry (find fd listen-entries :key [iolib:fd-of (socket-of !1)])))
-                         (assert listen-entry () "listen-entry not found for fd ~A?!" fd)
-                         (iter (for client-stream/iolib = (iolib:accept-connection (socket-of listen-entry) :wait #f))
-                               (while (and client-stream/iolib
-                                           (not (shutdown-initiated-p server))))
-                               (server.dribble "Acceptor multiplexer accepted the connection ~A, fd ~S" client-stream/iolib (iolib.streams:fd-of client-stream/iolib))
-                               ;; TODO is this a constant or depends on server network load?
-                               (setf (iolib:socket-option client-stream/iolib :receive-timeout) 15)
-                               ;; iolib streams are based on non-blocking fd's, so we don't need to (iolib.syscalls::%set-fd-nonblock client-stream-fd #t)
-                               (worker-loop/serve-one-request threaded? server worker client-stream/iolib listen-entry)))))))
-           (values)))
-    (if threaded?
-        (unwind-protect
-             (restart-case
-                 (body)
-               (remove-worker ()
-                 :report (lambda (stream)
-                           (format stream "Stop and remove worker ~A" worker))
-                 (values)))
-          (server.dribble "Worker ~A is about to leave. There are ~A workers currently." worker (length (workers-of server)))
-          (with-lock-held-on-server (server)
-            (when worker
-              (unregister-worker worker server))
-            (when (and (not (shutdown-initiated-p server))
-                       (zerop (length (workers-of server))))
-              (make-worker server))))
-        (body))))
+  (if threaded?
+      (unwind-protect
+           (restart-case
+               (worker-loop/body server threaded? worker)
+             (remove-worker ()
+               :report (lambda (stream)
+                         (format stream "Stop and remove worker ~A" worker))
+               (values)))
+        (server.dribble "Worker ~A is about to leave. There are ~A workers currently." worker (length (workers-of server)))
+        (with-lock-held-on-server (server)
+          (when worker
+            (unregister-worker worker server))
+          (when (and (not (shutdown-initiated-p server))
+                     (zerop (length (workers-of server))))
+            (make-worker server))))
+      (worker-loop/body server threaded? worker)))
+
+(def function worker-loop/body (server &optional (threaded? #f) worker)
+  (bind ((mux (connection-multiplexer-of server))
+         (listen-entries (listen-entries-of server)))
+    (assert mux)
+    (iter
+      (until (shutdown-initiated-p server))
+      ;; (server.dribble "Acceptor multiplexer ticked")
+      (iter (for (fd event-types) :in (iomux::harvest-events mux 1))
+            (server.dribble "Acceptor multiplexer returned for fd ~S, events ~S" fd event-types)
+            (until (shutdown-initiated-p server))
+            (when (member :read event-types :test #'eq)
+              (server.debug "Acceptor multiplexer got a :read event for listen fd ~S" fd)
+              (bind ((listen-entry (find fd listen-entries :key [iolib:fd-of (socket-of !1)])))
+                (assert listen-entry () "listen-entry not found for fd ~A?!" fd)
+                (iter (for client-stream/iolib = (iolib:accept-connection (socket-of listen-entry) :wait #f))
+                      (while (and client-stream/iolib
+                                  (not (shutdown-initiated-p server))))
+                      (server.dribble "Acceptor multiplexer accepted the connection ~A, fd ~S" client-stream/iolib (iolib.streams:fd-of client-stream/iolib))
+                      ;; TODO is this a constant or depends on server network load?
+                      (setf (iolib:socket-option client-stream/iolib :receive-timeout) 15)
+                      ;; iolib streams are based on non-blocking fd's, so we don't need to (iolib.syscalls::%set-fd-nonblock client-stream-fd #t)
+                      (worker-loop/serve-one-request threaded? server worker client-stream/iolib listen-entry)))))))
+  (values))
 
 (def function worker-loop/serve-one-request (threaded? server worker client-stream/iolib listen-entry)
   (bind ((client-stream/ssl nil))

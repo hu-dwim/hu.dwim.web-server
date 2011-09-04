@@ -199,7 +199,7 @@
 ;;;;;;
 ;;; invalid request handling
 
-;; TODO search all usages of this, and factor out what makes sense
+;; TODO search all usages of this and direct usage of <ajax-response ...>, and factor out what makes sense
 (def macro emit-response-for-ajax-aware-client (() &body body)
   `(emit-http-response ((+header/status+       +http-ok+
                          +header/content-type+ +xml-mime-type+))

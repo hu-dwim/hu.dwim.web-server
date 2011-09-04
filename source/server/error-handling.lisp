@@ -11,8 +11,10 @@
        (headers-are-sent-p *response*)))
 
 (def function is-error-worth-logging? (error)
-  (not (typep error '(or access-denied-error
-                         illegal-http-request/error))))
+  (not
+   ;; should we filter out this error from the log?
+   (typep error '(or access-denied-error
+                     illegal-http-request/error))))
 
 (def function build-error-log-message (&key error-condition message (include-backtrace #t))
   (hu.dwim.util:build-error-log-message :error-condition error-condition
@@ -49,6 +51,7 @@
       (if (is-error-worth-logging? error)
           (server.error message)
           (server.dribble message)))
+    ;; TODO maybe we only want to invoke the debugger for errors that are noteworthy if logging?
     (maybe-invoke-debugger error :context context))
 
   (:method :around (context error)

@@ -399,7 +399,7 @@
 (def (function e) mime-types-for-extension (extension)
   "MIME types associated with the given file extension."
   (check-type extension string)
-  (gethash extension *extension->mime-types*))
+  (values (gethash extension *extension->mime-types*)))
 
 (with-simple-restart (continue "Ignore the error and continue without reading ~A" +mime-types-file+)
   (ensure-mime-types-are-read))

@@ -22,7 +22,7 @@
 
 (def function is-error-from-client-stream? (error client-stream/iolib)
   (bind ((client-stream-fd (iolib:fd-of client-stream/iolib)))
-    (or (and (typep error 'cl+ssl::ssl-error-zero-return)
+    (or (and (typep error 'cl+ssl::ssl-error/handle)
              ;; TODO this is fragile and will most probably change in cl+ssl
              (bind ((ssl-handle (cl+ssl::ssl-error-handle error))
                     (fd-of-error (cl+ssl::ssl-get-fd ssl-handle)))

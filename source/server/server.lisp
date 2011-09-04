@@ -330,6 +330,16 @@
                       (close-request *request*)))
                (with-lock-held-on-server (server)
                  (decf (occupied-worker-count-of server)))))
+           (ignore-condition-predicate (error)
+             ;; passing down client-stream/ssl is not an option here, because an error can come earlier from cl+ssl:make-ssl-server-stream
+             (and (is-error-from-client-stream? error client-stream/iolib)
+                  (or (typep error 'cl+ssl::ssl-error-zero-return)
+                      (and (typep error 'cl+ssl::ssl-error)
+                           (member (first (cl+ssl::ssl-error-queue error))
+                                   ;; TODO extend cl+ssl with constants
+                                   '(#x1407609C ; http request
+                                     #x1407609B ; https proxy request
+                                     ))))))
            (handle-request-error (condition)
              (incf (failed-request-count-of server))
              (when (is-error-worth-logging? condition)
@@ -363,9 +373,7 @@
                   (bind ((swank::*sldb-quit-restart* (find-restart 'abort-server-request)))
                     (with-layered-error-handlers (#'handle-request-error
                                                   #'abort-request
-                                                  :ignore-condition-predicate (lambda (error)
-                                                                                ;; passing down client-stream/ssl is not an option here, because an error can come earlier from cl+ssl:make-ssl-server-stream
-                                                                                (is-error-from-client-stream? error client-stream/iolib)))
+                                                  :ignore-condition-predicate #'ignore-condition-predicate)
                       (serve-it))
                     (server.dribble "Worker ~A finished processing a request, will close the socket now" worker))
                 (:always

@@ -367,7 +367,12 @@
                (format t "~%Request id: ~A" *request-id*))
              (make-error-log-decorator
                (format t "~%Remote host: ~A (~A)" *request-remote-address/string* (or (ignore-errors (nth-value 2 (iolib.sockets:lookup-hostname *request-remote-address*)))
-                                                                                      "?"))))
+                                                                                      "n/a")))
+             (make-error-log-decorator
+               (format t "~%Local port: ~A" (port-of listen-entry)))
+             (make-error-log-decorator
+               (bind ((errno (iolib.syscalls:errno)))
+                 (format t "~%Posix errno: ~A (~A)" errno (iolib.syscalls:get-syscall-error-condition errno)))))
           (restart-case
               (unwind-protect-case (interrupted)
                   (bind ((swank::*sldb-quit-restart* (find-restart 'abort-server-request)))

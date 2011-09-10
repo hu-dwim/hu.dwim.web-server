@@ -332,14 +332,7 @@
                  (decf (occupied-worker-count-of server)))))
            (ignore-condition-predicate (error)
              ;; passing down client-stream/ssl is not an option here, because an error can come earlier from cl+ssl:make-ssl-server-stream
-             (and (is-error-from-client-stream? error client-stream/iolib)
-                  (or (typep error 'cl+ssl::ssl-error-zero-return)
-                      (and (typep error 'cl+ssl::ssl-error)
-                           (member (first (cl+ssl::ssl-error-queue error))
-                                   ;; TODO extend cl+ssl with constants
-                                   '(#x1407609C ; http request
-                                     #x1407609B ; https proxy request
-                                     ))))))
+             (is-error-from-client-stream? error client-stream/iolib))
            (handle-request-error (condition)
              (incf (failed-request-count-of server))
              (when (is-error-worth-logging? condition)

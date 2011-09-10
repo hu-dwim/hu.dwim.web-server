@@ -12,9 +12,16 @@
 
 (def function is-error-worth-logging? (error)
   (not
-   ;; should we filter out this error from the log?
-   (typep error '(or access-denied-error
-                     illegal-http-request/error))))
+   ;; should we filter out these errors from the log?
+   (or (typep error '(or access-denied-error
+                         illegal-http-request/error
+                         cl+ssl::ssl-error-zero-return))
+       (and (typep error 'cl+ssl::ssl-error)
+            (member (first (cl+ssl::ssl-error-queue error))
+                    ;; TODO extend cl+ssl with constants
+                    '(#x1407609C    ; http request
+                      #x1407609B    ; https proxy request
+                      ))))))
 
 (def function build-error-log-message (&key error-condition message (include-backtrace #t))
   (hu.dwim.util:build-error-log-message :error-condition error-condition
@@ -49,10 +56,12 @@
     (bind ((message (build-error-log-message :error-condition error
                                              :message "HANDLE-TOPLEVEL-ERROR :before is now dealing with this error")))
       (if (is-error-worth-logging? error)
-          (server.error message)
-          (server.dribble message)))
-    ;; TODO maybe we only want to invoke the debugger for errors that are noteworthy if logging?
-    (maybe-invoke-debugger error :context context))
+          (progn
+            (server.error message)
+            (maybe-invoke-debugger error :context context))
+          (progn
+            (server.dribble message)
+            (server.warn "Error (of type ~S) is not worthy for being logged according to IS-ERROR-WORTH-LOGGING?" (type-of error))))))
 
   (:method :around (context error)
     (with-thread-activity-description ("HANDLE-TOPLEVEL-ERROR")

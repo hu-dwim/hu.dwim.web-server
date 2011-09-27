@@ -60,8 +60,8 @@
             (server.error message)
             (maybe-invoke-debugger error :context context))
           (progn
-            (server.dribble message)
-            (server.warn "Error (of type ~S) is not worthy for being logged according to IS-ERROR-WORTH-LOGGING?" (type-of error))))))
+            (server.info message)
+            (server.warn "Error (of type ~S) is not worthy for being logged as an error according to IS-ERROR-WORTH-LOGGING?" (type-of error))))))
 
   (:method :around (context error)
     (with-thread-activity-description ("HANDLE-TOPLEVEL-ERROR")

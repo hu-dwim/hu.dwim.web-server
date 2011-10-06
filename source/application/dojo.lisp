@@ -118,13 +118,13 @@
                                                    `js-piece(create :node ,id
                                                                     :type ,dojo-type)))))))))))))
 
-(def (with-macro* e) render-dojo-widget (dojo-type &optional (dojo-properties '()) &key (id (generate-unique-string/frame-or-response "_w")))
+(def (with-macro* e) render-dojo-widget (dojo-type &optional (dojo-properties '()) &key (id (generate-unique-string "_w")))
   (multiple-value-prog1
       (-with-macro/body- (id '-id-))
     (push (list* id dojo-type dojo-properties) *dojo-widgets*)))
 
 #+() ; TODO decide about this
-(def (function e) render-dojo-widget* (dojo-type &optional (dojo-properties '()) &key (id (generate-unique-string/frame-or-response "_w")))
+(def (function e) render-dojo-widget* (dojo-type &optional (dojo-properties '()) &key (id (generate-unique-string "_w")))
   (render-dojo-widget (dojo-type dojo-properties :id id)
     <div (:id ,-id-)>))
 
@@ -133,7 +133,7 @@
 (def (macro e) render-dojo-dialog ((id-var &key title (width "400px") (attach-point '`js-piece(slot-value document.body ,(generate-unique-string/frame))))
                                     &body body)
   (once-only (width attach-point)
-    `(bind ((,id-var (generate-unique-string/frame)))
+    `(bind ((,id-var (generate-unique-string)))
        `js(bind ((dialog (or ,,attach-point
                              (new dijit.Dialog (create :id ,,id-var
                                                        :title ,,title

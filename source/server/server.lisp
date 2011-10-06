@@ -343,12 +343,13 @@
            (abort-request (&key reason &allow-other-keys)
              (abort-server-request reason)))
       (debug-only
-        (assert (notany #'boundp '(*server* *broker-stack* *request* *response* *request-remote-address* *request-remote-address/string* *request-id*
+        (assert (notany #'boundp '(*server* *broker-stack* *request* *response* *response/unique-counter* *request-remote-address* *request-remote-address/string* *request-id*
                                    *matching-uri-path-element-stack* *matching-uri-path-element-stack/total-length* *matching-uri-path-element-stack/remaining-path*))))
       (bind ((*server* server)
              (*broker-stack* (list server))
              (*request* nil)
              (*response* nil)
+             (*response/unique-counter* 0)
              (*request-remote-address* nil)
              (*request-remote-address/string* nil)
              (*request-id* nil)

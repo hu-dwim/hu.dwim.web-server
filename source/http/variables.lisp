@@ -15,6 +15,9 @@
 (def (special-variable e :documentation "The HTTP RESPONSE for the HTTP REQUEST currently being processed.")
   *response*)
 
+(def (special-variable :documentation "It is bound to zero with each request.")
+  *response/unique-counter*)
+
 (def (special-variable e :documentation "The remote host which sent the currently processed HTTP REQUEST.")
   *request-remote-address*)
 

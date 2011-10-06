@@ -39,41 +39,29 @@
 (def method debug-client-side? ((self frame))
   (debug-client-side? (root-component-of self)))
 
-(def (function ei) generate-unique-string (prefix context)
+(def (function i) %generate-unique-string (prefix unique-counter)
   (bind ((*print-pretty* #f))
     (with-output-to-string (str)
       (when prefix
         (princ prefix str))
-      (princ (incf (unique-counter-of context)) str))))
+      (princ unique-counter str))))
 
-;; NOTE: GENERATE-UNIQUE-STRING/RESPONSE should not be used with ajax renderable parts, because there is no guarantee that it will not generate the same string that is already present in the page
-(def (function ei) generate-unique-string/response (&optional prefix response)
-  (generate-unique-string (or prefix "r") (or response *response*)))
-
-(def (function ei) generate-unique-string/frame (&optional prefix frame)
-  (generate-unique-string (or prefix "f") (or frame *frame*)))
-
-(def (function ei) generate-unique-string/frame-or-response (&optional prefix)
+;; NOTE: care must be taken to have a *frame* when rendering ajax re-renderable parts, because only that guarantees that there won't be duplicate id's on the client side
+(def (function ei) generate-unique-string (&optional prefix)
   (if *frame*
-      (generate-unique-string/frame prefix *frame*)
-      (generate-unique-string/response prefix *response*)))
+      (%generate-unique-string (or prefix "f") (incf (unique-counter-of *frame*)))
+      (%generate-unique-string (or prefix "r") (incf *response/unique-counter*))))
 
-(def function %expand-with-unique-strings (generator names body)
+(def (macro e) with-unique-strings ((&rest names) &body body)
   `(let ,(mapcar (lambda (name)
                    (bind (((:values symbol string) (etypecase name
                                                      (symbol
                                                       (values name nil))
                                                      ((cons symbol (cons string-designator null))
                                                       (values (first name) (string (second name)))))))
-                     `(,symbol (,generator ,string))))
+                     `(,symbol (generate-unique-string ,string))))
                  names)
      ,@body))
-
-(def (macro e) with-unique-strings/response ((&rest names) &body body)
-  (%expand-with-unique-strings 'generate-unique-string/response names body))
-
-(def (macro e) with-unique-strings/frame ((&rest names) &body body)
-  (%expand-with-unique-strings 'generate-unique-string/frame names body))
 
 (def function mark-frame-invalid (&optional (frame *frame*))
   (setf (is-frame-valid? frame) #f)

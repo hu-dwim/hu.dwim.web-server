@@ -99,6 +99,7 @@
         ;; therefore we wrap here again with the js script collapser to emit us before the parent
         ;; WITH-XHTML-BODY-ENVIRONMENT emits the rest of the js stuff.
         `xml,@(with-xhtml-body-environment (:wrappers '(js-script-collapser/wrapper))
+                ;; NOTE don't use `js-onload here (comes later in *xhtml-body-environment-wrappers*, and it's better to have a visually more standalone entry in the output for this)
                 `js(on-load
                     (hdws.io.instantiate-dojo-widgets
                      (array ,@(iter (for entry :in *dojo-widgets*)
@@ -127,45 +128,3 @@
 (def (function e) render-dojo-widget* (dojo-type &optional (dojo-properties '()) &key (id (generate-unique-string "_w")))
   (render-dojo-widget (dojo-type dojo-properties :id id)
     <div (:id ,-id-)>))
-
-;; TODO cleanup the stuff below
-
-(def (macro e) render-dojo-dialog ((id-var &key title (width "400px") (attach-point '`js-piece(slot-value document.body ,(generate-unique-string/frame))))
-                                    &body body)
-  (once-only (width attach-point)
-    `(bind ((,id-var (generate-unique-string)))
-       `js(bind ((dialog (or ,,attach-point
-                             (new dijit.Dialog (create :id ,,id-var
-                                                       :title ,,title
-                                                       :content ,(transform-xml/js-quoted ,@body))))))
-            (setf ,,attach-point dialog)
-            ;; TODO qq should work with ,,(when ...)
-            (bind ((width ,,width))
-              (when width
-                (dojo.style dialog.domNode "width" width)))
-            (dialog.show)))))
-
-(def (macro e) render-dojo-dialog/buttons (&body entires)
-  `<table (:style "float: right;")
-     <tr ,@,@(iter (for (label js) :in entires)
-                   (collect `<td ,(render-dojo-button ,label :on-click ,js)>))>>)
-
-(def (macro e) render-dojo-button (label &key on-click)
-  `<div (:dojoType   #.+dijit/button+
-         :label      ,,label
-         :onClick    ,,on-click)>)
-
-#+nil ;; TODO this should work instead of the above
-(def (macro e) render-dojo-button (label &key on-click)
-  `(render-dojo-widget* (+dijit/button+ :label ,label :on-click ,on-click)))
-
-#+ () ; TODO delme
-(def (macro e) render-dojo-widget* ((dojo-type &rest attributes &key id (xml-element-name "span")
-                                               &allow-other-keys)
-                                     &body body)
-  (remove-from-plistf attributes :id :xml-element-name)
-  `<,,xml-element-name (:id ,,id
-                        :dojoType ,,dojo-type
-                        ,@,@(iter (for (name value) :on attributes :by #'cddr)
-                                  (collect (make-xml-attribute (hyphened-to-camel-case (string-downcase name)) (make-xml-unquote value)))))
-                       ,@,@body>)

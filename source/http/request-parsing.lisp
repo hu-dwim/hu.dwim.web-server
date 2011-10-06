@@ -31,6 +31,7 @@
          (marker-position 0)
          ;; KLUDGE deadline stuff should be hadled by a call/cc based multiplexer dropping dry connections
          (start-time (get-monotonic-time))
+         ;; FIXME random inline constant
          (deadline (+ start-time 15)))
     (cffi-sys:with-pointer-to-vector-data (buffer buffer/lisp)
       (iter

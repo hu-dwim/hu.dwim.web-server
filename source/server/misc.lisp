@@ -109,6 +109,7 @@
            (bind (((:values success? version-string) (cl-ppcre:scan-to-strings version-scanner header-value)))
              (when success?
                (bind ((version (or (ignore-errors
+                                     ;; KLUDGE version can be 1.2.3 also
                                      (parse-number:parse-number (first-elt version-string)))
                                    0)))
                  (make-instance 'http-user-agent

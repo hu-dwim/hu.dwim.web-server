@@ -27,7 +27,7 @@
    (ssl-certificate nil)
    (ssl-key nil)
    (ssl-key-password nil)
-   ;; temporary values initialized while server is running
+   ;; from here only temporary values that are only valid while the server is running
    (socket nil)))
 
 (def print-object (server-listen-entry :identity #f :type #f)
@@ -35,6 +35,7 @@
   (write-string "/")
   (princ (port-of -self-)))
 
+;; TODO split it to server and http-server. revise the rest of the code to also accommodate alternative protocols.
 (def (class* e) server (request-counter-mixin
                         debug-context-mixin)
   ((administrator-email-address nil :type (or null string))
@@ -276,7 +277,7 @@
                 (iter (for client-stream/iolib = (iolib:accept-connection (socket-of listen-entry) :wait #f))
                       (while (and client-stream/iolib
                                   (not (shutdown-initiated-p server))))
-                      (server.dribble "Acceptor multiplexer accepted the connection ~A, fd ~S" client-stream/iolib (iolib.streams:fd-of client-stream/iolib))
+                      (server.dribble "Acceptor multiplexer accepted the connection ~A, fd ~S, on port ~A" client-stream/iolib (iolib.streams:fd-of client-stream/iolib) (port-of listen-entry))
                       ;; TODO is this a constant or depends on server network load?
                       (setf (iolib:socket-option client-stream/iolib :receive-timeout) 15)
                       ;; iolib streams are based on non-blocking fd's, so we don't need to (iolib.syscalls::%set-fd-nonblock client-stream-fd #t)
@@ -368,7 +369,7 @@
                (bind ((errno (iolib.syscalls:errno)))
                  (format t "~%Posix errno: ~A (~A)" errno (iolib.syscalls:get-syscall-error-condition errno)))))
           (restart-case
-              (unwind-protect-case (interrupted)
+              (unwind-protect-case (interrupted?)
                   (bind ((swank::*sldb-quit-restart* (find-restart 'abort-server-request)))
                     (with-layered-error-handlers (#'handle-request-error
                                                   #'abort-request
@@ -379,8 +380,8 @@
                  (block closing
                    (with-layered-error-handlers ((lambda (error &key &allow-other-keys)
                                                    (declare (ignorable error))
-                                                   ;; let's not clutter the error log with non-interesting errors... (server.error (build-error-log-message :error-condition error :message (format nil "Failed to close the socket stream in WORKER-LOOP/SERVE-ONE-REQUEST while ~A the UNWIND-PROTECT block." (if interrupted "unwinding" "normally exiting"))))
-                                                   (server.debug "Error closing the socket ~A while ~A: ~A" client-stream/iolib (if interrupted "unwinding" "normally exiting") error)
+                                                   ;; let's not clutter the error log with non-interesting errors... (server.error (build-error-log-message :error-condition error :message (format nil "Failed to close the socket stream in WORKER-LOOP/SERVE-ONE-REQUEST while ~A the UNWIND-PROTECT block." (if interrupted? "unwinding" "normally exiting"))))
+                                                   (server.debug "Error closing the socket ~A while ~A: ~A" client-stream/iolib (if interrupted? "unwinding" "normally exiting") error)
                                                    (return-from closing))
                                                  #'abort-request)
                      (server.dribble "Closing the socket")
@@ -426,7 +427,7 @@
           (with-error-log-decorator (make-error-log-decorator
                                       (bind ((length-limit 2048)
                                              (*print-length* length-limit))
-                                        (format t "~%First ~S bytes of the request: " length-limit)
+                                        (format t "~%First, at most ~S bytes of the request: " length-limit)
                                         (write http-request-head-buffer)))
             (parse-http-request/head http-request-head-buffer (to-boolean client-stream/ssl))))
          (raw-content-length (header-alist-value headers +header/content-length+))

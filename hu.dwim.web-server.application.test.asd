@@ -16,6 +16,7 @@
   :components ((:module "test"
                 :components ((:module "applications"
                               :components ((:file "authentication")
+                                           (:file "dojo")
                                            (:file "echo")
                                            (:file "parameter")
                                            (:file "performance")

@@ -180,8 +180,8 @@
       ,(foreach (lambda (stylesheet-uri)
                   <link (:rel "stylesheet" :type "text/css"
                               :href ,(if (stringp stylesheet-uri)
-                                         (escape-as-uri stylesheet-uri)
-                                         (print-uri-to-string stylesheet-uri)))>)
+                                         (uri/percent-encoding/encode stylesheet-uri)
+                                         (uri/print-to-string stylesheet-uri)))>)
                 stylesheet-uris)
       ,@head>
      <body (,@body-element-attributes)
@@ -231,10 +231,10 @@ If the request contains a param (no distinction between GET and POST params is m
 (def (function eio) make-cookie (name value &key comment domain max-age path secure)
   (rfc2109:make-cookie
    :name name
-   :value (escape-as-uri value)
+   :value (uri/percent-encoding/encode value)
    :comment comment
    :domain domain
    :max-age max-age
    :path (awhen path
-           (escape-as-uri it))
+           (uri/percent-encoding/encode it))
    :secure secure))

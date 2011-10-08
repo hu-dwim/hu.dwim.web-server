@@ -29,6 +29,7 @@
                :hu.dwim.syntax-sugar
                :hu.dwim.util.error-handling
                :hu.dwim.util.temporary-files
+               :hu.dwim.util.uri
                :hu.dwim.util.zlib
                :iolib
                :iolib.pathnames

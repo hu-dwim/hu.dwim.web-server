@@ -84,7 +84,7 @@
                    (if event.ctrlKey 2 0)
                    (if (or event.altKey event.metaKey) 4 0))))
     (return (hdws.append-query-parameter url
-                                        #.(escape-as-uri +modifier-keys-parameter-name+)
+                                        #.(uri/percent-encoding/encode +modifier-keys-parameter-name+)
                                         value))))
 
 #+nil ; currently unused
@@ -92,10 +92,10 @@
   (setf url (+ url (if (< (.index-of url "?") 0)
                        "?"
                        "&")))
-  (setf url (+ url #.(escape-as-uri +frame-id-parameter-name+)    "=" (encodeURIComponent frame-id)
-               "&" #.(escape-as-uri +frame-index-parameter-name+) "=" (encodeURIComponent frame-index)))
+  (setf url (+ url #.(uri/percent-encoding/encode +frame-id-parameter-name+)    "=" (encodeURIComponent frame-id)
+               "&" #.(uri/percent-encoding/encode +frame-index-parameter-name+) "=" (encodeURIComponent frame-index)))
   (when action-id
-    (setf url (+ url "&" #.(escape-as-uri +action-id-parameter-name+) "=" (encodeURIComponent action-id))))
+    (setf url (+ url "&" #.(uri/percent-encoding/encode +action-id-parameter-name+) "=" (encodeURIComponent action-id))))
   (return url))
 
 (defun hdws.absolute-url-from (url)
@@ -145,7 +145,7 @@
   (when event
     (setf url (hdws.decorate-url-with-modifier-keys url event)))
   (bind ((decorated-url (hdws.append-query-parameter url
-                                                    #.(escape-as-uri +ajax-aware-parameter-name+)
+                                                    #.(uri/percent-encoding/encode +ajax-aware-parameter-name+)
                                                     (if ajax "t" "")))
          (form (aref document.forms 0)))
     (if ajax

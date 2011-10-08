@@ -319,7 +319,7 @@
                         (with-error-log-decorators ((make-error-log-decorator
                                                       (format t "~%User agent: ~S" (header-value *request* +header/user-agent+)))
                                                     (make-error-log-decorator
-                                                      (format t "~%Request URL: ~S" (print-uri-to-string (uri-of *request*)))))
+                                                      (format t "~%Request URL: ~S" (uri/print-to-string (uri-of *request*)))))
                           (loop
                             (with-simple-restart (retry-handling-request "Try again handling this HTTP request")
                               (when (and *response*
@@ -641,7 +641,7 @@
   (awhen size
     (setf content-disposition (string+ content-disposition ";size=" it)))
   (awhen file-name
-    (setf content-disposition (string+ content-disposition ";filename=\"" (escape-as-uri it) "\"")))
+    (setf content-disposition (string+ content-disposition ";filename=\"" (uri/percent-encoding/encode it) "\"")))
   content-disposition)
 
 (def function serve-stream (input-stream &key

@@ -302,8 +302,8 @@
 (def function render-directory-as-html (directory path-prefix relative-path &key (filter 'render-directory-as-html/default-filter))
   (labels ((render-url (path name)
              <a (:href ,(etypecase path
-                          (string (escape-as-uri path))
-                          (uri (print-uri-to-string path))))
+                          (string (uri/percent-encoding/encode path))
+                          (uri (uri/print-to-string path))))
                 ,name>)
            (render-file (name path)
              <tr <td ,(render-url name name)>

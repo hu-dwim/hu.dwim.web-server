@@ -109,8 +109,8 @@
 (def (function e) make-redirect-response-with-frame-parameters-decorated (&optional (frame *frame*))
   (bind ((uri (clone-request-uri)))
     (assert (and frame (not (null (id-of frame)))))
-    (setf (uri-query-parameter-value uri +frame-id-parameter-name+) (id-of frame))
-    (setf (uri-query-parameter-value uri +frame-index-parameter-name+) (frame-index-of frame))
+    (setf (uri/query-parameter-value uri +frame-id-parameter-name+) (id-of frame))
+    (setf (uri/query-parameter-value uri +frame-index-parameter-name+) (frame-index-of frame))
     (make-redirect-response uri)))
 
 (def (function e) make-uri-for-current-application (&optional relative-path)
@@ -118,7 +118,7 @@
     (uri/delete-all-query-parameters uri)
     (decorate-uri-for-current-application uri)
     (when relative-path
-      (append-path-to-uri uri relative-path))
+      (uri/append-path uri relative-path))
     uri))
 
 (def (function e) decorate-uri-for-current-application (uri)
@@ -132,7 +132,7 @@
 
 (def function make-uri-for-current-frame ()
   (bind ((uri (clone-request-uri)))
-    (setf (uri-query-parameter-value uri +action-id-parameter-name+) nil)
+    (setf (uri/query-parameter-value uri +action-id-parameter-name+) nil)
     (decorate-uri uri *frame*)
     uri))
 
@@ -140,8 +140,8 @@
   (bind ((uri (clone-request-uri)))
     (decorate-uri uri *application*)
     (decorate-uri uri *session*)
-    (setf (uri-query-parameter-value uri +frame-id-parameter-name+) nil)
-    (setf (uri-query-parameter-value uri +frame-index-parameter-name+) nil)
+    (setf (uri/query-parameter-value uri +frame-id-parameter-name+) nil)
+    (setf (uri/query-parameter-value uri +frame-index-parameter-name+) nil)
     uri))
 
 (def (function e) make-redirect-response-for-current-application (&optional relative-path)

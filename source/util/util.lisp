@@ -55,25 +55,27 @@
   (declare (type array-index initial-length))
   (make-array initial-length :adjustable #t :fill-pointer 0 :element-type element-type))
 
-(def (function i) make-displaced-array (array &optional (start 0) (end (length array)))
-  (make-array (- end start)
-              :element-type (array-element-type array)
-              :displaced-to array
-              :displaced-index-offset start))
-
 (def (function o) split-ub8-vector (separator line)
-  (declare (type simple-ub8-vector line)
-           (inline make-displaced-array))
-  (iter outer ; we only need the outer to be able to collect a last chunk in the finally block of the inner loop
-        (iter (with start = 0)
-              (for end :upfrom 0)
-              (for char :in-vector line)
-              (declare (type fixnum start end))
-              (when (= separator char)
-                (in outer (collect (make-displaced-array line start end)))
-                (setf start (1+ end)))
-              (finally (in outer (collect (make-displaced-array line start)))))
-        (while nil)))
+  (declare (type simple-ub8-vector line))
+  (macrolet ((make-displaced-array (array start &optional (end nil end?))
+               (once-only (array start)
+                 `(make-array (- ,(if end?
+                                      end
+                                      `(length ,array))
+                                 ,start)
+                              :element-type (array-element-type ,array)
+                              :displaced-to ,array
+                              :displaced-index-offset ,start))))
+    (iter outer ; we only need the outer to be able to collect a last chunk in the finally block of the inner loop
+          (iter (with start = 0)
+                (for end :upfrom 0)
+                (for char :in-vector line)
+                (declare (type fixnum start end))
+                (when (= separator char)
+                  (in outer (collect (make-displaced-array line start end)))
+                  (setf start (1+ end)))
+                (finally (in outer (collect (make-displaced-array line start)))))
+          (while nil))))
 
 (def (function i) is-lock-held? (lock)
   #*((:sbcl (debug-only (check-type lock sb-thread:mutex))

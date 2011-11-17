@@ -6,7 +6,7 @@
 
 (in-package :hu.dwim.web-server.test)
 
-(def special-variable *performance-application* (make-instance 'standard-application :path-prefix "/performance/"))
+(def special-variable *performance-application* (make-instance 'standard-application :path "performance"))
 
 (def entry-point (*performance-application* :path "")
   (with-request-parameters (name)

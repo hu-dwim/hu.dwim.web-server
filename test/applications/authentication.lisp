@@ -9,7 +9,7 @@
 (def class authentication-application (standard-application)
   ())
 
-(def special-variable *authentication-application* (make-instance 'authentication-application :path-prefix "/authentication/"))
+(def special-variable *authentication-application* (make-instance 'authentication-application :path "authentication"))
 
 (def entry-point (*authentication-application* :path +login-entry-point-path+)
   (call-with-entry-point-logic/login-with-identifier-and-password

@@ -17,7 +17,7 @@
 
 (def function startup-test-server/project-file-server (&key (maximum-worker-count 16) (log-level +dribble+))
   (with-main-logger-level log-level
-    (startup-test-server-with-brokers (make-directory-serving-broker "/hdws/" (system-relative-pathname :hu.dwim.web-server.test ""))
+    (startup-test-server-with-brokers (make-directory-serving-broker "hdws" (system-relative-pathname :hu.dwim.web-server.test ""))
                                       :maximum-worker-count maximum-worker-count)))
 
 (def function startup-test-server/performance (&key (maximum-worker-count 4) (log-level +warn+))

@@ -6,7 +6,7 @@
 
 (in-package :hu.dwim.web-server.test)
 
-(def special-variable *parameter-application* (make-instance 'standard-application :path-prefix "/parameter/"))
+(def special-variable *parameter-application* (make-instance 'standard-application :path "parameter"))
 
 (def function render-mime-part-details (mime-part)
   <p "Mime part headers:">
@@ -35,7 +35,7 @@
     (make-raw-functional-response ()
       (emit-http-response/simple-html-document (:title "foo")
         <p "Parameters:"
-          <a (:href ,(string+ (path-prefix-of *parameter-application*)
+          <a (:href ,(string+ (join-strings (path-of *parameter-application*) #\/)
                               (unless (or number? the-answer?)
                                 "?theanswer=yes&number=42")))
             "try this">>

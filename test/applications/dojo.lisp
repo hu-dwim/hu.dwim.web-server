@@ -8,7 +8,7 @@
 
 ;; status of this code: completely ad-hoc random experiment
 
-(def special-variable *dojo-application* (make-instance 'application-with-dojo-support :path-prefix "/dojo/"))
+(def special-variable *dojo-application* (make-instance 'application-with-dojo-support :path "dojo"))
 
 (def entry-point (*dojo-application* :path "xhr.data")
   (hu.dwim.web-server::make-functional-response/ajax-aware-client ()
@@ -23,7 +23,7 @@
                                                (parse-dojo-widgets-on-load #f) (dojo-file-name "dojo.js") (dojo-skin-name "tundra")
                                                (dojo-release-uri (parse-uri (string+ "/static/hdws/libraries/" *dojo-directory-name*))))
   (bind ((application *application*)
-         (path-prefix (path-prefix-of application))
+         (application-path (path-of application))
          (debug-client-side? (debug-client-side? nil)))
     (emit-xhtml-prologue encoding +xhtml-1.1-doctype+)
     <html (:xmlns     #.+xml-namespace-uri/xhtml+
@@ -42,7 +42,7 @@
                     <link (:rel "stylesheet"
                            :type "text/css"
                            :href ,(bind ((uri (clone-uri stylesheet-uri)))
-                                    (uri/prepend-path uri path-prefix)
+                                    (uri/prepend-path uri application-path)
                                     (uri/print-to-string uri)))>)
                   stylesheet-uris)
         <script (:type +javascript-mime-type+)
@@ -67,7 +67,7 @@
                     <script (:type +javascript-mime-type+
                              :src  ,(bind ((uri (clone-uri script-uri)))
                                       (unless (starts-with #\/ (path-of uri))
-                                        (uri/prepend-path uri path-prefix))
+                                        (uri/prepend-path uri application-path))
                                       (when debug-client-side?
                                         (setf (uri/query-parameter-value uri "debug") "t"))
                                       (uri/print-to-string uri)))

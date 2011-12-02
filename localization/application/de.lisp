@@ -38,7 +38,6 @@
   (slot-name.debug-on-error "debug on error")
   (slot-name.processed-request-count "processed request count")
   (slot-name.priority "priority")
-  (slot-name.path-prefix "path prefix")
   (slot-name.requests-to-sessions-count "number of requests to sessions")
   (slot-name.default-uri-scheme "default uri scheme")
   (slot-name.default-locale "default locale")

@@ -61,7 +61,7 @@
     (when application-relative-path
       (when path
         (error "REGISTER-ACTION/URI was called woth both PATH, and APPLICATION-RELATIVE-PATH arguments at the same time"))
-      (setf (path-of uri) (path-prefix-of *application*))
+      (setf (path-of uri) (path-of *application*))
       (uri/append-path uri application-relative-path))
     (when path
       (setf (path-of uri) path))
@@ -80,7 +80,7 @@
   (:method progn (uri (application application))
     (unless (scheme-of uri)
       (setf (scheme-of uri) (default-uri-scheme-of application)))
-    (setf (path-of uri) (path-prefix-of application)))
+    (setf (path-of uri) (path-of application)))
   (:method progn (uri (frame frame))
     (setf (uri/query-parameter-value uri +frame-id-parameter-name+) (id-of frame))
     (setf (uri/query-parameter-value uri +frame-index-parameter-name+) (frame-index-of frame)))

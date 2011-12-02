@@ -29,29 +29,8 @@
 (def (special-variable :documentation "If HANDLE-TOPLEVEL-ERROR gets called then this will be its context argument.")
   *context-of-error* nil)
 
-(def (special-variable :documentation "A stack of currently matching path elements while request handling is going deeper and deeper in the broker tree.")
-  *matching-uri-path-element-stack*)
+(def (special-variable :documentation "While walking down the broker tree for someone to handle this request, this variable is always rebound to the currently remaining path elements of the request uri.")
+  *remaining-query-path-elements*)
 
-(def (special-variable :documentation "Optimization; keeps the current value of (reduce #'+ *matching-uri-path-element-stack* :key #'length).")
-  *matching-uri-path-element-stack/total-length*)
-
-(def (special-variable :documentation "Optimization; it's either NIL or the current value of (subseq (path-of (uri-of request)) *matching-uri-path-element-stack/total-length*).")
-  *matching-uri-path-element-stack/remaining-path*)
-
-(def function remaining-path-of-request-uri (&optional (request *request*))
-  "While matching the request uri, returns the remaining part of the path of the uri that have not yet been matched."
-  (or *matching-uri-path-element-stack/remaining-path*
-      ;; TODO this is slow and WTF... need to find out how it should work.
-      (bind ((uri-path (with-output-to-string (str)
-                         (iter (for el :in (path-of (uri-of request)))
-                               (write-char #\/ str)
-                               (write-string el str)))))
-        (setf *matching-uri-path-element-stack/remaining-path*
-              (subseq uri-path *matching-uri-path-element-stack/total-length*)))))
-
-(def with-macro with-new-matching-uri-path-element (path)
-  (check-type path string)
-  (bind ((*matching-uri-path-element-stack* (cons path *matching-uri-path-element-stack*))
-         (*matching-uri-path-element-stack/total-length* (+ (length path) *matching-uri-path-element-stack/total-length*))
-         (*matching-uri-path-element-stack/remaining-path* nil))
-    (-body-)))
+(def (special-variable :documentation "Like *REMAINING-QUERY-PATH-ELEMENTS*, but contains the already matched elements.")
+  *matched-query-path-elements*)

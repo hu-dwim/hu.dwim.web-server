@@ -10,7 +10,6 @@
   (trace broker/default-handler
          handle-request
          call-with-new-matching-uri-path-element
-         remaining-path-of-request-uri
          call-if-matches-request
          produce-response
          query-brokers-for-response
@@ -24,7 +23,7 @@
   (bind ((priority 100))
     (append
      (list (make-instance 'js-directory-serving-broker
-                          :path-prefix "/hdws/js/"
+                          :path "hdws/js"
                           :root-directory (system-relative-pathname :hu.dwim.web-server "source/js/")
                           :priority priority)
            (make-instance 'js-i18n-broker :priority priority))

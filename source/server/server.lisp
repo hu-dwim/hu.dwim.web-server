@@ -316,6 +316,7 @@
                                                                                  :key ssl-key
                                                                                  :password ssl-key-password)))
                         (setf *request* (read-request server client-stream/iolib client-stream/ssl))
+                        (setf *remaining-query-path-elements* (path-of (uri-of *request*)))
                         (with-error-log-decorators ((make-error-log-decorator
                                                       (format t "~%User agent: ~S" (header-value *request* +header/user-agent+)))
                                                     (make-error-log-decorator
@@ -345,7 +346,7 @@
              (abort-server-request reason)))
       (debug-only
         (assert (notany #'boundp '(*server* *broker-stack* *request* *response* *response/unique-counter* *request-remote-address* *request-remote-address/string* *request-id*
-                                   *matching-uri-path-element-stack* *matching-uri-path-element-stack/total-length* *matching-uri-path-element-stack/remaining-path*))))
+                                   *remaining-query-path-elements* *matched-query-path-elements*))))
       (bind ((*server* server)
              (*broker-stack* (list server))
              (*request* nil)
@@ -354,9 +355,8 @@
              (*request-remote-address* nil)
              (*request-remote-address/string* nil)
              (*request-id* nil)
-             (*matching-uri-path-element-stack* '())
-             (*matching-uri-path-element-stack/total-length* 0)
-             (*matching-uri-path-element-stack/remaining-path* nil))
+             (*remaining-query-path-elements* '())
+             (*matched-query-path-elements* '()))
         (with-error-log-decorators
             ((make-error-log-decorator
                (format t "~%Request id: ~A" *request-id*))

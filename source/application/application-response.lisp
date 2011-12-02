@@ -24,7 +24,7 @@
                              (progn
                                (app.warn "Domain used to reach the server is illegal (no dot character in ~S), not providing a domain argument for the session cookie" hostname)
                                nil))
-                 :path (path-prefix-of application))
+                 :path (join-strings (path-of application) #\/))
                 response))
   response)
 
@@ -58,7 +58,7 @@
              ;; bind *session* and *frame* here, so that WITH-SESSION/FRAME/ACTION-LOGIC and entry-points can freely setf it
              (*session* nil)
              (*frame* nil)
-             (*application-relative-path* (remaining-path-of-request-uri request))
+             (*application-relative-path* *remaining-query-path-elements*)
              (*fallback-locale-for-functional-localizations* (default-locale-of application))
              (*rendering-phase-reached* #f)
              (*inside-user-code* #f)

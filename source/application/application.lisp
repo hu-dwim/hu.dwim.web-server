@@ -15,7 +15,7 @@
                                       application-with-dojo-support)
   ())
 
-(def (class* e) application (broker-at-path-prefix
+(def (class* e) application (broker-at-path
                              request-counter-mixin
                              debug-context-mixin)
   ((requests-to-sessions-count 0 :type integer :export :accessor)
@@ -34,7 +34,7 @@
    (running-in-test-mode #f :type boolean :accessor running-in-test-mode? :export :accessor)
    (debug-client-side :type boolean :writer (setf debug-client-side?))
    (ajax-enabled *default-ajax-enabled* :type boolean :accessor ajax-enabled? :export :accessor))
-  (:default-initargs :path-prefix "/"))
+  (:default-initargs :path '()))
 
 (def (function e) make-frame-root-component (&optional content)
   (make-frame-root-component-using-application *application* *session* *frame* content))
@@ -57,11 +57,11 @@
 (def (function e) human-readable-broker-path (server application)
   (bind ((path (broker-path-to-broker server application)))
     (assert (member application path))
-    (apply #'string+
-           (iter (for el :in path)
-                 (etypecase el
-                   (application (collect (path-prefix-of el)))
-                   (server nil))))))
+    (join-strings (iter (for el :in path)
+                        (etypecase el
+                          (application (collect (join-strings (path-of el) #\/)))
+                          (server nil)))
+                  #\/)))
 
 (def function broker-path-to-broker (root broker)
   (map-broker-tree root (lambda (path)
@@ -117,9 +117,8 @@
   (with-lock-held-on-thing ('application application)
     (-with-macro/body-)))
 
-(def (constructor o) (application path-prefix)
-  (assert path-prefix)
-  #*((:sbcl (setf (sb-thread:mutex-name (lock-of -self-)) (format nil "hu.dwim.web-server application lock for application ~A" path-prefix)))))
+(def (constructor o) (application path)
+  #*((:sbcl (setf (sb-thread:mutex-name (lock-of -self-)) (format nil "hu.dwim.web-server application lock for application at ~A" path)))))
 
 (def method session-class-of :around ((self application))
   (or (call-next-method)
@@ -130,7 +129,7 @@
                                :name (symbolicate '#:session-class-for/
                                                   (class-name (class-of self))
                                                   "/"
-                                                  (path-prefix-of self)))
+                                                  (join-strings (path-of self) #\/)))
               (app.debug "Instantiated session class ~A for application ~A" it self)))))
 
 (def method session-class list ((application application))

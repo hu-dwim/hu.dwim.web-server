@@ -8,9 +8,7 @@
 
 (def methods entry-point-equals-for-redefinition
   (:method ((a broker-at-path) (b broker-at-path))
-    (string= (path-of a) (path-of b)))
-  (:method ((a broker-at-path-prefix) (b broker-at-path-prefix))
-    (string= (path-prefix-of a) (path-prefix-of b))))
+    (equal (path-of a) (path-of b))))
 
 (def (function e) ensure-entry-point (application entry-point)
   ;; helper function for redefining entry points. works based on the generic protocol called ENTRY-POINT-EQUALS-FOR-REDEFINITION.
@@ -27,14 +25,17 @@
                                 (b-priority (priority-of b)))
                            (when (= a-priority
                                     b-priority)
-                             (when (and (typep a 'broker-at-path-prefix)
-                                        (typep b 'broker-at-path))
-                               (return-from comparing #f))
-                             (when (and (typep a 'broker-at-path)
-                                        (typep b 'broker-at-path-prefix))
-                               (return-from comparing #t))
-                             (bind ((a-path (broker-path-or-path-prefix a :otherwise nil))
-                                    (b-path (broker-path-or-path-prefix b :otherwise nil)))
+                             #+() ; TODO delme if we decide not to support prefix-mode
+                             ((when (and (typep a 'broker-at-path-prefix)
+                                         (typep b 'broker-at-path))
+                                (return-from comparing #f))
+                              (when (and (typep a 'broker-at-path)
+                                         (typep b 'broker-at-path-prefix))
+                                (return-from comparing #t)))
+                             (bind ((a-path (when (typep a 'broker-at-path)
+                                              (path-of a)))
+                                    (b-path (when (typep b 'broker-at-path)
+                                              (path-of b))))
                                (when (and a-path
                                           b-path)
                                  ;; if we can extract path for brokers of the same priority then the one with a longer path goes first
@@ -96,17 +97,14 @@
     (cond
       ((eq class :path)
        (setf class 'broker-at-path)
-       (push :path initargs))
-      ((eq class :path-prefix)
-       (setf class 'broker-at-path-prefix)
-       (push :path-prefix initargs)))
+       (push :path initargs)))
     `(bind ((,entry-point (make-instance ',class ,@initargs)))
        ,(when body
           `(setf (handler-of ,entry-point)
                  (named-lambda entry-point-definer/handler (&key ((:broker ,entry-point)) ((:request ,request)) &allow-other-keys)
                    (check-type ,entry-point broker)
                    (call-if-matches-request ,entry-point ,request (named-lambda entry-point-definer/body ()
-                                                                    (bind ((*entry-point-relative-path* (remaining-path-of-request-uri ,request)))
+                                                                    (bind ((*entry-point-relative-path* *remaining-query-path-elements*))
                                                                       ,@body))))))
        (ensure-entry-point ,application ,entry-point)
        ,entry-point)))
@@ -117,10 +115,10 @@
        ,@(iter (for entry :in entries)
                (collect `(def (entry-point ,@-options-) (,application ,@entry)))))))
 
-(def (definer e) file-serving-entry-point (application path-prefix root-directory &key priority)
+(def (definer e) file-serving-entry-point (application path root-directory &key priority)
   ;; TODO it should dispatch on (cl-fad:directory-pathname-p root-directory) to chose the type, but at macroexpand time root-directory can be a form, not only a pathname
   `(def (entry-point ,@-options-) (,application directory-serving-broker
-                                                :path-prefix ,path-prefix
+                                                :path ,path
                                                 :root-directory ,root-directory
                                                 :priority ,priority)))
 
@@ -128,12 +126,12 @@
   (once-only (application)
     `(progn
        ,@(iter (for entry :in entries)
-               (bind (((path-prefix root-directory &key priority) entry))
+               (bind (((path root-directory &key priority) entry))
                  (collect `(def (file-serving-entry-point ,@-options-)
-                               ,application ,path-prefix ,root-directory :priority ,priority)))))))
+                               ,application ,path ,root-directory :priority ,priority)))))))
 
-(def (definer e) js-file-serving-entry-point (application path-prefix root-directory &key priority)
+(def (definer e) js-file-serving-entry-point (application path root-directory &key priority)
   `(def (entry-point ,@-options-) (,application js-directory-serving-broker
-                                                :path-prefix ,path-prefix
+                                                :path-prefix ,path
                                                 :root-directory ,root-directory
                                                 :priority ,priority)))

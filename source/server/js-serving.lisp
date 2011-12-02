@@ -14,26 +14,28 @@
   (:default-initargs
    :render-directory-index #f))
 
-(def (function e) make-js-directory-serving-broker (path-prefix root-directory &key priority)
+(def (function e) make-js-directory-serving-broker (path root-directory &key priority)
   (make-instance 'js-directory-serving-broker
-                 :path-prefix path-prefix
+                 :path path
                  :root-directory root-directory
                  :priority priority))
 
-(def method directory-serving/resolve-uri-to-absolute-file-path ((broker js-directory-serving-broker) (path-prefix string) (relative-path string)
+(def method directory-serving/resolve-uri-to-absolute-file-path ((broker js-directory-serving-broker) (uri-path list) (relative-path list)
                                                                  (root-directory iolib.pathnames:file-path))
-  (bind ((suffix "js"))
-    (when (ends-with-subseq suffix relative-path)
-      (bind ((relative-path/lisp (string+ (subseq relative-path 0 (- (length relative-path) (length suffix)))
-                                          "lisp")))
+  (bind ((suffix ".js")
+         (file-name (last-elt relative-path)))
+    (when (ends-with-subseq suffix file-name)
+      (bind ((relative-path/lisp (append (butlast relative-path)
+                                         (list (string+ (subseq file-name 0 (- (length file-name) (length suffix)))
+                                                        ".lisp")))))
         (ignore-errors
-          (iolib.os:resolve-file-path relative-path/lisp :defaults root-directory))))))
+          (iolib.os:resolve-file-path (join-strings relative-path/lisp #\/) :defaults root-directory))))))
 
 (def method make-directory-serving-broker/cache-key ((broker js-directory-serving-broker) (absolute-file-path iolib.pathnames:file-path) content-encoding)
   (list (iolib.pathnames:file-path-namestring absolute-file-path) content-encoding *debug-client-side*))
 
 (def method update-directory-serving-broker/cache-entry ((broker js-directory-serving-broker) (cache-entry directory-serving-broker/cache-entry)
-                                                         (absolute-file-path iolib.pathnames:file-path) (relative-path string) (root-directory iolib.pathnames:file-path)
+                                                         (absolute-file-path iolib.pathnames:file-path) (relative-path list) (root-directory iolib.pathnames:file-path)
                                                          response-compression)
   (bind (((:slots bytes-to-respond last-used-at content-encoding content-type file-write-date) cache-entry))
     (files.debug "Compiling js file for the cache entry of ~A, in ~A" absolute-file-path broker)

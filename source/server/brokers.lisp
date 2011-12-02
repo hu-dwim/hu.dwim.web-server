@@ -123,42 +123,38 @@
 ;;;;;;
 ;;; broker-at-path
 
-(def function broker-path-or-path-prefix (broker &key (otherwise :error otherwise?))
-  (typecase broker
-    (broker-at-path (path-of broker))
-    (broker-at-path-prefix (path-prefix-of broker))
-    (t (handle-otherwise (error "~S was called on illegal type ~S" 'broker-path-or-path-prefix broker)))))
-
+;; TODO rename to broker-at-query-path
 (def class* broker-at-path (broker)
-  ((path)))
+  ((path
+    :type list
+    :documentation "A list of strings that will be matched against the path elements of the parsed URI.")
+   #+() ; maybe?
+   (prefix-mode?
+    #f
+    :type boolean)))
+
+(def method shared-initialize :around ((broker broker-at-path) slot-names &rest args &key path)
+  (if (stringp path)
+      (apply #'call-next-method broker slot-names :path (hu.dwim.util::uri/split-path path) args)
+      (call-next-method)))
 
 (def print-object broker-at-path
-  (format t "~S ~S" (path-of -self-) (priority-of -self-)))
+  (format t "~S ~S" (join-strings (path-of -self-) #\/) (priority-of -self-)))
 
 (def method call-if-matches-request ((broker broker-at-path) request thunk)
-  (bind ((path (path-of broker))
-         (remaining-query-path (remaining-path-of-request-uri request)))
-    (server.debug "Trying to match ~A; path is ~S, remaining-query-path is ~S" broker path remaining-query-path)
-    (when (string= path remaining-query-path)
-      (with-new-matching-uri-path-element path
-        (funcall thunk)))))
-
-;;;;;;
-;;; broker-at-path-prefix
-
-(def class* broker-at-path-prefix (broker)
-  ((path-prefix :type string)))
-
-(def print-object broker-at-path-prefix
-  (format t "~S ~S" (path-prefix-of -self-) (priority-of -self-)))
-
-(def method call-if-matches-request ((broker broker-at-path-prefix) request thunk)
-  (bind ((path-prefix (path-prefix-of broker))
-         (remaining-query-path (remaining-path-of-request-uri request)))
-    (server.debug "Trying to match ~A; path-prefix is ~S, remaining-query-path is ~S" broker path-prefix remaining-query-path)
-    (when (starts-with-subseq path-prefix remaining-query-path)
-      (with-new-matching-uri-path-element path-prefix
-        (funcall thunk)))))
+  (bind ((broker-path (path-of broker))
+         (broker-path-length (length broker-path)))
+    (server.debug "Trying to match ~A; path is ~S, remaining-query-path is ~S" broker broker-path *remaining-query-path-elements*)
+    (when (<= broker-path-length
+              (length *remaining-query-path-elements*))
+      (iter (for broker-el :in broker-path)
+            (for query-el :in *remaining-query-path-elements*)
+            (unless (string= broker-el query-el)
+              (return))
+            (finally
+             (bind ((*remaining-query-path-elements* (nthcdr broker-path-length *remaining-query-path-elements*))
+                    (*matched-query-path-elements* (append *matched-query-path-elements* broker-path)))
+               (return (funcall thunk))))))))
 
 ;;;;;;
 ;;; compare-brokers-for-sorting
@@ -166,20 +162,19 @@
 (def (generic e) compare-brokers-for-sorting (a b)
   (:documentation "Used as sorting predicate to sort brokers of a broker-based-server.")
   (:method ((a broker) (b broker))
+    (> (priority-of a) (priority-of b)))
+  (:method ((a broker-at-path) (b broker-at-path))
     (bind ((a/priority (priority-of a))
            (b/priority (priority-of b))
-           (a/path (broker-path-or-path-prefix a :otherwise nil))
-           (b/path (broker-path-or-path-prefix b :otherwise nil)))
+           (a/path (path-of a))
+           (b/path (path-of b)))
       (cond
         ((and (= a/priority b/priority)
               a/path
               b/path)
-         (if (string= a/path b/path)
-             (and (not (typep a 'broker-at-path-prefix))
-                  (typep b 'broker-at-path-prefix))
-             (string> a/path b/path)))
-      (t
-       (> a/priority b/priority))))))
+         (> (length a/path) (length b/path)))
+        (t
+         (> a/priority b/priority))))))
 
 ;;;;;;
 ;;; constant-response-broker
@@ -193,17 +188,9 @@
 (def class* constant-response-broker-at-path (constant-response-broker broker-at-path)
   ())
 
-(def class* constant-response-broker-at-path-prefix (constant-response-broker broker-at-path-prefix)
-  ())
-
 (def (function e) make-redirect-broker (path target-uri)
   (make-instance 'constant-response-broker-at-path
                  :path path
-                 :response (make-redirect-response target-uri)))
-
-(def (function e) make-path-prefix-redirect-broker (path-prefix target-uri)
-  (make-instance 'constant-response-broker-at-path-prefix
-                 :path-prefix path-prefix
                  :response (make-redirect-response target-uri)))
 
 ;;;;;;

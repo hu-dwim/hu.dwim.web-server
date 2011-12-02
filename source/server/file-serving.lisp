@@ -48,7 +48,7 @@
 
 ;; TODO managed in-memory caching of files inside a directory-serving-broker
 
-(def class* directory-serving-broker (broker-at-path-prefix)
+(def class* directory-serving-broker (broker-at-path)
   ((root-directory
     :unbound
     :type iolib.pathnames:file-path)
@@ -84,42 +84,37 @@
                args))
       (call-next-method)))
 
-(def (function e) make-directory-serving-broker (path-prefix root-directory &key priority)
+(def (function e) make-directory-serving-broker (path root-directory &key priority)
   (check-type root-directory (or pathname iolib.pathnames:file-path-designator))
   (make-instance 'directory-serving-broker
-                 :path-prefix path-prefix
+                 :path path
                  :root-directory root-directory
                  :priority priority))
 
 (def method produce-response ((broker directory-serving-broker) (request http-request))
   (bind ((root-directory (root-directory-of broker))
-         (path-prefix (path-prefix-of broker))
-         (relative-path (remaining-path-of-request-uri request)))
-    (server.debug "PRODUCE-RESPONSE for path-prefix ~S, relative-path ~S, root-directory ~A" path-prefix relative-path root-directory)
+         (uri-path (path-of broker))
+         (relative-path *remaining-query-path-elements*))
+    (server.debug "PRODUCE-RESPONSE for uri-path ~S, relative-path ~S, root-directory ~A" uri-path relative-path root-directory)
     (check-type root-directory iolib.pathnames:file-path)
     (assert (iolib.pathnames:absolute-file-path-p root-directory))
-    (when (starts-with #\/ relative-path)
-      ;; drop any leading /'s
-      (setf relative-path (subseq relative-path (position #\/ relative-path :test-not #'char=))))
-    (or (produce-response/directory-serving broker path-prefix relative-path root-directory)
+    (or (produce-response/directory-serving broker uri-path relative-path root-directory)
         (funcall (path-does-not-exists-response-factory-of broker)
                  :broker broker
-                 :path-prefix path-prefix
+                 :uri-path uri-path
                  :relative-path relative-path
                  :root-directory root-directory))))
 
-(def generic directory-serving/resolve-uri-to-absolute-file-path (broker path-prefix relative-path root-directory)
-  (:method (broker (path-prefix string) (relative-path string) (root-directory iolib.pathnames:file-path))
+(def generic directory-serving/resolve-uri-to-absolute-file-path (broker uri-path relative-path root-directory)
+  (:method (broker (uri-path list) (relative-path list) (root-directory iolib.pathnames:file-path))
     (if (zerop (length relative-path))
         root-directory
-        (ignore-errors (iolib.os:resolve-file-path relative-path :defaults root-directory)))))
+        (ignore-errors (iolib.os:resolve-file-path (join-strings relative-path #\/) :defaults root-directory)))))
 
-(def generic produce-response/directory-serving (broker path-prefix relative-path root-directory)
-  (:method :before (broker path-prefix (relative-path string) root-directory)
-    (assert (not (starts-with #\/ relative-path))))
-  (:method ((broker directory-serving-broker) (path-prefix string) (relative-path string) (root-directory iolib.pathnames:file-path))
-    (bind ((absolute-file-path (directory-serving/resolve-uri-to-absolute-file-path broker path-prefix relative-path root-directory)))
-      (files.debug "Making file serving response for ~A, path-prefix ~S, relative-path ~S, root-directory ~S" absolute-file-path path-prefix relative-path root-directory)
+(def generic produce-response/directory-serving (broker uri-path relative-path root-directory)
+  (:method ((broker directory-serving-broker) (uri-path list) (relative-path list) (root-directory iolib.pathnames:file-path))
+    (bind ((absolute-file-path (directory-serving/resolve-uri-to-absolute-file-path broker uri-path relative-path root-directory)))
+      (files.debug "Making file serving response for ~A, uri-path ~S, relative-path ~S, root-directory ~S" absolute-file-path uri-path relative-path root-directory)
       (when (and absolute-file-path
                  (or (allow-access-to-external-files? broker)
                      (starts-with-subseq (iolib.pathnames:file-path-namestring root-directory)
@@ -127,25 +122,26 @@
         (cond
           ((iolib.os:directory-exists-p absolute-file-path)
            (when (render-directory-index? broker)
-             (if (or (ends-with #\/ relative-path)
-                     (zerop (length relative-path)))
-                 (produce-response/directory-serving/directory broker absolute-file-path path-prefix relative-path root-directory)
-                 (make-redirect-response (append-path-to-uri (clone-request-uri) "/")))))
+             (if (path-had-leading-slash? (uri-of *request*))
+                 (produce-response/directory-serving/directory broker absolute-file-path uri-path relative-path root-directory)
+                 (make-redirect-response (aprog1
+                                             (clone-request-uri)
+                                           (setf (path-had-leading-slash? it) #t))))))
           (t
-           (produce-response/directory-serving/file broker absolute-file-path path-prefix relative-path root-directory)))))))
+           (produce-response/directory-serving/file broker absolute-file-path uri-path relative-path root-directory)))))))
 
-(def generic produce-response/directory-serving/directory (broker absolute-file-path path-prefix relative-path root-directory)
+(def generic produce-response/directory-serving/directory (broker absolute-file-path uri-path relative-path root-directory)
   (:method ((broker directory-serving-broker) (absolute-file-path iolib.pathnames:file-path)
-            (path-prefix string) (relative-path string) (root-directory iolib.pathnames:file-path))
-    (make-directory-index-response path-prefix relative-path root-directory absolute-file-path)))
+            (uri-path list) (relative-path list) (root-directory iolib.pathnames:file-path))
+    (make-directory-index-response uri-path relative-path root-directory absolute-file-path)))
 
 (def generic make-directory-serving-broker/cache-key (broker absolute-file-path content-encoding)
   (:method ((broker directory-serving-broker) (absolute-file-path iolib.pathnames:file-path) content-encoding)
     (list (iolib.pathnames:file-path-namestring absolute-file-path) content-encoding)))
 
-(def generic produce-response/directory-serving/file (broker absolute-file-path path-prefix relative-path root-directory)
+(def generic produce-response/directory-serving/file (broker absolute-file-path uri-path relative-path root-directory)
   (:method ((broker directory-serving-broker) (absolute-file-path iolib.pathnames:file-path)
-            (path-prefix string) (relative-path string) (root-directory iolib.pathnames:file-path))
+            (uri-path list) (relative-path list) (root-directory iolib.pathnames:file-path))
     (bind ((response-compression (when (compress-file-before-serving? absolute-file-path)
                                    (default-response-compression)))
            (cache (cache-of broker))
@@ -189,9 +185,9 @@
 
 (def generic update-directory-serving-broker/cache-entry (broker cache-entry absolute-file-path relative-path root-directory response-compression)
   (:method ((broker directory-serving-broker) (cache-entry directory-serving-broker/cache-entry)
-            (absolute-file-path iolib.pathnames:file-path) (relative-path string) (root-directory iolib.pathnames:file-path) response-compression)
+            (absolute-file-path iolib.pathnames:file-path) (relative-path list) (root-directory iolib.pathnames:file-path) response-compression)
     (bind (((:slots bytes-to-respond last-used-at content-encoding content-type file-write-date) cache-entry)
-           (compressed-file (iolib.pathnames:file-path (shadow-temporary-filename root-directory relative-path "hdws-compressed-static-file-cache"))))
+           (compressed-file (iolib.pathnames:file-path (shadow-temporary-filename root-directory (join-strings relative-path #\/) "hdws-compressed-static-file-cache"))))
       (if response-compression
           (progn
             (files.debug "Updating compressed file cache for ~S, into compressed file ~S" absolute-file-path compressed-file)
@@ -268,26 +264,26 @@
 ;;; Directory index
 
 (def class* directory-index-response (http-response)
-  ((path-prefix)
+  ((uri-path)
    (root-directory)
    (relative-path)
    (directory)))
 
-(def (function e) make-directory-index-response (path-prefix relative-path root-directory
-                                                 &optional (directory (merge-pathnames relative-path root-directory)))
+(def (function e) make-directory-index-response (uri-path relative-path root-directory
+                                                          &optional (directory (merge-pathnames (join-strings relative-path #\/) root-directory)))
   (aprog1
       (make-instance 'directory-index-response
-                     :path-prefix path-prefix :root-directory root-directory
+                     :uri-path uri-path :root-directory root-directory
                      :relative-path relative-path :directory directory)
     (setf (header-value it +header/content-type+) (content-type-for +html-mime-type+ (encoding-name-of it)))))
 
 (def method convert-to-primitive-response ((self directory-index-response))
-  (bind ((title (string+ "Directory index of \"" (relative-path-of self) "\" under \"" (path-prefix-of self) "\""))
+  (bind ((title (string+ "Directory index of \"" (join-strings (relative-path-of self) #\/) "\" under \"" (join-strings (uri-path-of self) #\/) "\""))
          (body (with-output-to-sequence (*xml-stream* :external-format (external-format-of self)
                                                       :initial-buffer-size 256)
                  (emit-html-document (:content-type +html-content-type+ :title title)
                    (handler-case
-                       (render-directory-as-html (directory-of self) (path-prefix-of self) (relative-path-of self))
+                       (render-directory-as-html (directory-of self) (uri-path-of self) (relative-path-of self))
                      (iolib.syscalls:eacces ()
                        (access-denied-error)))))))
     (make-byte-vector-response* body
@@ -299,7 +295,8 @@
   ;; by default exclude .foo, both files and dirs
   (not (starts-with #\. name)))
 
-(def function render-directory-as-html (directory path-prefix relative-path &key (filter 'render-directory-as-html/default-filter))
+(def function render-directory-as-html (directory uri-path relative-path &key (filter 'render-directory-as-html/default-filter))
+  (declare (ignore uri-path relative-path))
   (labels ((render-url (path name)
              <a (:href ,(etypecase path
                           (string (uri/percent-encoding/encode path))
@@ -322,8 +319,9 @@
                  ;; we ignore symlinks, because they should be resolved already at this point. if not, then it's a broken one.
                  (:symbolic-link)))))
      <table
-       ;; FIXME this is plain wrong. use clone-request-uri and drop the last piece of path, but it needs a fix in parse-uri...
-       <tr <td ,(render-url (string+ path-prefix relative-path "../") "[parent directory]")>
+       <tr <td ,(bind ((parent-uri (clone-request-uri)))
+                  (setf (path-of parent-uri) (butlast (path-of parent-uri)))
+                  (render-url parent-uri "[parent directory]"))>
            <td>>
        ,(progn
           (iolib.os:walk-directory directory #'render-entry

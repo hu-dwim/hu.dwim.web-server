@@ -76,9 +76,7 @@
     broker
     broker-based-server
     broker-at-path
-    broker-at-path-prefix
     path-of
-    path-prefix-of
 
     session
     frame

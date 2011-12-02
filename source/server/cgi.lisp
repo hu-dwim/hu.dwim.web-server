@@ -52,8 +52,8 @@
                  :environment environment))
 
 (def method produce-response ((broker cgi-file-broker) request)
-  (bind ((script-path (apply #'string+ (reverse *matching-uri-path-element-stack*)))
-         (extra-path (subseq (path-of (uri-of *request*)) (length script-path))))
+  (bind ((script-path (join-strings (list* "/" *matched-query-path-elements*) #\/))
+         (extra-path (subseq script-path (length script-path))))
     (handle-cgi-request (build-cgi-command-line broker (cgi-file-of broker)) script-path
                         :extra-path extra-path
                         :www-root (www-root-of broker)
@@ -68,9 +68,9 @@
    :render-directory-index #f)
   (:documentation "A broker to serve all executable CGI files in a directory."))
 
-(def (function e) make-cgi-directory-broker (path-prefix root-directory &key priority (environment '()))
+(def (function e) make-cgi-directory-broker (path root-directory &key priority (environment '()))
   (make-instance 'cgi-file-broker
-                 :path-prefix path-prefix
+                 :path path
                  :root-directory root-directory
                  :priority priority
                  :environment environment))
@@ -81,17 +81,11 @@
        (list (iolib.pathnames:file-path-namestring cgi-file))))
 
 ;; TODO maybe customize the lower layers of file serving to enable some form of caching?
-(def method produce-response/directory-serving ((broker cgi-directory-broker) (path-prefix string) (relative-path string)
+(def method produce-response/directory-serving ((broker cgi-directory-broker) (path list) (relative-path list)
                                                 (root-directory iolib.pathnames:file-path))
-  (assert (not (starts-with #\/ relative-path)))
-  (unless (string= relative-path "")
-    (bind (((:values cgi-file-name extra-path) (aif (position #\/ relative-path)
-                                                    (values (subseq relative-path 0 it)
-                                                            (subseq relative-path it))
-                                                    (if (redirect-for-trailing-slash? broker)
-                                                        (return-from produce-response/directory-serving
-                                                          (make-redirect-response (clone-request-uri :append-to-path "/")))
-                                                        (values relative-path "/"))))
+  (when relative-path
+    (bind ((cgi-file-name (first relative-path))
+           (extra-path (rest relative-path))
            (cgi-file (iolib.pathnames:merge-file-paths cgi-file-name root-directory))
            (exists? (iolib.os:file-exists-p cgi-file))
            (follow-symlinks? (allow-access-to-external-files? broker))
@@ -104,7 +98,7 @@
       (if (and exists?
                (eq kind :regular-file))
           (if (is-file-executable? cgi-file :follow-symlinks follow-symlinks? :effective-user-id effective-user-id :effective-group-id effective-group-id)
-              (bind ((script-path (apply #'string+ (append (reverse *matching-uri-path-element-stack*) (list cgi-file-name))))
+              (bind ((script-path (join-strings (append (list* "/" *matched-query-path-elements*) cgi-file-name) #\/))
                      (cgi-file (iolib.os:absolute-file-path cgi-file))
                      (cgi-command-line (build-cgi-command-line broker cgi-file)))
                 (handle-cgi-request cgi-command-line script-path
@@ -148,7 +142,9 @@
       (set "REQUEST_METHOD"  (http-method-of *request*))
       (set "SCRIPT_NAME"     script-path)
       (set "SERVER_NAME"     (host-of request-uri))
-      (set "SERVER_PORT"     (or (port-of request-uri) "80"))
+      (set "SERVER_PORT"     (aif (port-of request-uri)
+                                  (integer-to-string it)
+                                  "80"))
       (set "SERVER_PROTOCOL" (http-version-string-of *request*))
 
       ;; (set "AUTH_TYPE")

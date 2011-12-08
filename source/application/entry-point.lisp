@@ -36,10 +36,8 @@
                                               (path-of a)))
                                     (b-path (when (typep b 'broker-at-path)
                                               (path-of b))))
-                               (when (and a-path
-                                          b-path)
-                                 ;; if we can extract path for brokers of the same priority then the one with a longer path goes first
-                                 (return-from comparing (> (length a-path) (length b-path))))))
+                               ;; if we can extract path for brokers of the same priority then the one with a longer path goes first
+                               (return-from comparing (> (length a-path) (length b-path)))))
                            (> a-priority b-priority))))))
   entry-point)
 

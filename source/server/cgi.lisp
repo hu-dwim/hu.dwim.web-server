@@ -232,7 +232,12 @@
                                                                             (subseq-if-longer 1024 (read-file-into-string
                                                                                                     (iolib.pathnames:file-path-namestring stderr/file))
                                                                                               :postfix "[...]"))
-                                                           :include-backtrace #f)))
+                                                           :include-backtrace #f))
+                        (cgi.debug (format nil "Standard output:~%~S"
+                                           ;; TODO add :start & :end limit to READ-FILE-INTO-STRING
+                                           (subseq-if-longer 1024 (read-file-into-string
+                                                                   (iolib.pathnames:file-path-namestring stdout/file))
+                                                             :postfix "[...]"))))
                       (make-raw-functional-response ()
                         (emit-http-response/internal-server-error)))))
             (:always

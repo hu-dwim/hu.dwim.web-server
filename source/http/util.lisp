@@ -231,10 +231,9 @@ If the request contains a param (no distinction between GET and POST params is m
 (def (function eio) make-cookie (name value &key comment domain max-age path secure)
   (rfc2109:make-cookie
    :name name
-   :value (uri/percent-encoding/encode value)
+   :value value
    :comment comment
    :domain domain
    :max-age max-age
-   :path (awhen path
-           (uri/percent-encoding/encode it))
+   :path path
    :secure secure))

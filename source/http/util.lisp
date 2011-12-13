@@ -229,6 +229,23 @@ If the request contains a param (no distinction between GET and POST params is m
 ;;; Cookies
 
 (def (function eio) make-cookie (name value &key comment domain max-age path secure)
+  ;; TODO decide about DEBUG-ONLY and about this code in general...
+  (debug-only
+    (unless (every (lambda (char)
+                     (bind ((code (char-code char)))
+                       (or (= code #x21)
+                           (<= #x23 code #x2b)
+                           (<= #x2d code #x3a)
+                           (<= #x3c code #x5b)
+                           (<= #x5d code #x7e))))
+                   value)
+      (cerror "ignore" "~S: ~S is not a valid cookie value" 'make-cookie value))
+    (unless (every (lambda (char)
+                     (bind ((code (char-code char)))
+                       (and (< #x1f code)
+                            (not (member code '(#.(char-code #\;) #x7f))))))
+                   path)
+      (cerror "ignore" "~S: ~S is not a valid cookie path" 'make-cookie path)))
   (rfc2109:make-cookie
    :name name
    :value value

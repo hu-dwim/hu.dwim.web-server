@@ -24,7 +24,7 @@
                              (progn
                                (app.warn "Domain used to reach the server is illegal (no dot character in ~S), not providing a domain argument for the session cookie" hostname)
                                nil))
-                 :path (join-strings (path-of application) #\/))
+                 :path (string+ "/" (join-strings (path-of application) #\/)))
                 response))
   response)
 

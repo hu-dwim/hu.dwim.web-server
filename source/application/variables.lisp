@@ -73,8 +73,8 @@
 (def constant +delayed-content-parameter-name+ "_d")
 (def constant +modifier-keys-parameter-name+   "_m")
 
-(pushnew +ajax-aware-parameter-name+ *clone-request-uri/default-strip-query-parameters*)
-(pushnew +delayed-content-parameter-name+ *clone-request-uri/default-strip-query-parameters*)
+(pushnew +ajax-aware-parameter-name+ *clone-request-uri/default-strip-query-parameters* :test 'equal)
+(pushnew +delayed-content-parameter-name+ *clone-request-uri/default-strip-query-parameters* :test 'equal)
 
 (def constant +frame-query-parameter-names+ (list +frame-id-parameter-name+
                                                   +frame-index-parameter-name+

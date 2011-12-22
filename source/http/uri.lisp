@@ -10,13 +10,13 @@
 
 (def (function e) clone-request-uri (&key (strip-query-parameters *clone-request-uri/default-strip-query-parameters*)
                                           append-to-path)
-  (bind ((uri (clone-uri (uri-of *request*))))
+  (bind ((uri (hu.dwim.uri:clone-uri (uri-of *request*))))
     (if (eq strip-query-parameters :all)
-        (uri/delete-all-query-parameters uri)
+        (hu.dwim.uri:delete-all-query-parameters uri)
         (dolist (parameter-name (ensure-list strip-query-parameters))
-          (uri/delete-query-parameters uri parameter-name)))
+          (hu.dwim.uri:delete-query-parameters uri parameter-name)))
     (when append-to-path
       (etypecase append-to-path
         (string
-         (setf (path-of uri) (string+ (path-of uri) append-to-path)))))
+         (setf (path-of uri) (string+ (hu.dwim.uri:path-of uri) append-to-path)))))
     uri))

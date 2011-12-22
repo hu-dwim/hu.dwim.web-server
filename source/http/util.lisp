@@ -180,8 +180,8 @@
       ,(foreach (lambda (stylesheet-uri)
                   <link (:rel "stylesheet" :type "text/css"
                               :href ,(if (stringp stylesheet-uri)
-                                         (uri/percent-encoding/encode stylesheet-uri)
-                                         (uri/print-to-string stylesheet-uri)))>)
+                                         stylesheet-uri ; we can't call percent-encoding ourselves, because that would also encode the path separators...
+                                         (hu.dwim.uri:print-uri-to-string stylesheet-uri)))>)
                 stylesheet-uris)
       ,@head>
      <body (,@body-element-attributes)

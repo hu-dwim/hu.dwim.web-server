@@ -173,7 +173,7 @@
        ;; we take the first because cookies are in such an order that the one with the most specific path is at the head of the list
        ;; (this ordering does NOT apply to domains, and ff sends them in random order if the only difference is the domain! baaaaah... see comments at: http://www.nczonline.net/blog/2009/05/05/http-cookies-explained/ because of this the session id cookie of foo.com and dev.foo.com cannot be separated using a shared web server process)
        ;; normally we want the most specific one to be returned, otherwise use the more generic FIND-REQUEST-COOKIES call
-       (uri/percent-encoding/decode (rfc2109:cookie-value (first it)))
+       (hu.dwim.uri:percent-encoding/decode (rfc2109:cookie-value (first it)))
        (handle-otherwise/value otherwise)))
 
 (def (function e) add-cookie (cookie &optional (response *response*))
@@ -373,7 +373,7 @@
                                             :cookies (cookies-of self)
                                             :cacheable #f)
     <h1 "Page not found">
-    <p <span (:style "background-color: #fdd;") ,(uri/print-to-string (uri-of *request*) :escape #f)>
+    <p <span (:style "background-color: #fdd;") ,(hu.dwim.uri:print-uri-to-string (uri-of *request*) :escape #f)>
        " was not found on this server">))
 
 
@@ -394,7 +394,7 @@
 (def (function e) render-request (request)
   (emit-html-document (:title "URL echo server")
     <p "Raw request uri: \"" ,(raw-uri-of request) "\"">
-    <p "Parsed request uri: \"" ,(uri/print-to-string (uri-of request)) "\"">
+    <p "Parsed request uri: \"" ,(hu.dwim.uri:print-uri-to-string (uri-of request)) "\"">
     <h3 "Headers">
     <hr>
     <table
@@ -435,7 +435,7 @@
 
 (def (function e) make-redirect-response (target-uri)
   (setf target-uri (etypecase target-uri
-                     (uri (uri/print-to-string target-uri))
+                     (hu.dwim.uri:uri (hu.dwim.uri:print-uri-to-string target-uri))
                      (string target-uri)))
   (bind ((response (make-instance 'redirect-response :target-uri target-uri)))
     (setf (header-value response +header/location+) target-uri)

@@ -135,7 +135,7 @@
 
 (def method shared-initialize :around ((broker broker-at-path) slot-names &rest args &key path)
   (if (stringp path)
-      (apply #'call-next-method broker slot-names :path (hu.dwim.util::uri/split-path path) args)
+      (apply #'call-next-method broker slot-names :path (hu.dwim.uri:split-path path) args)
       (call-next-method)))
 
 (def print-object broker-at-path
@@ -238,5 +238,5 @@
 will echo the request when the host of the http request url ends with \"localhost.localdomain\", otherwise it goes on with *my-application*."
   (make-instance 'filtered-delegate-broker
                  :filter (named-lambda virtual-host-filter (request)
-                           (ends-with-subseq host-name (host-of (uri-of request))))
+                           (ends-with-subseq host-name (hu.dwim.uri:host-of (uri-of request))))
                  :children child-brokers))

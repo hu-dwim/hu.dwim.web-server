@@ -36,7 +36,7 @@
                         :delayed-content ,delayed-content))
 
 (def (macro e) action/href ((&key scheme delayed-content) &body body)
-  `(uri/print-to-string
+  `(hu.dwim.uri:print-uri-to-string
     (action/uri (:scheme ,scheme :delayed-content ,delayed-content)
       ,@body)))
 
@@ -57,36 +57,37 @@
     (decorate-uri uri *frame*)
     (decorate-uri uri action)
     (when scheme
-      (setf (scheme-of uri) scheme))
+      (setf (hu.dwim.uri:scheme-of uri) scheme))
     (when application-relative-path
       (when path
         (error "REGISTER-ACTION/URI was called woth both PATH, and APPLICATION-RELATIVE-PATH arguments at the same time"))
-      (setf (path-of uri) (path-of *application*))
-      (uri/append-path uri application-relative-path))
+      (setf (hu.dwim.uri:path-of uri) (path-of *application*))
+      (hu.dwim.uri:append-path uri application-relative-path))
     (when path
-      (setf (path-of uri) path))
-    (setf (uri/query-parameter-value uri +delayed-content-parameter-name+)
+      (setf (hu.dwim.uri:path-of uri) path))
+    (setf (hu.dwim.uri:query-parameter-value uri +delayed-content-parameter-name+)
           (if delayed-content "t" nil))
     uri))
 
 (def (function e) register-action/href (action &key scheme path application-relative-path delayed-content)
-  (uri/print-to-string (register-action/uri action :scheme scheme :path path :application-relative-path application-relative-path
-                                            :delayed-content delayed-content)))
+  (hu.dwim.uri:print-uri-to-string
+   (register-action/uri action :scheme scheme :path path :application-relative-path application-relative-path
+                        :delayed-content delayed-content)))
 
 (def (generic e) decorate-uri (uri thing)
   (:method progn (uri thing)
     ;; nop
     )
   (:method progn (uri (application application))
-    (unless (scheme-of uri)
-      (setf (scheme-of uri) (default-uri-scheme-of application)))
-    (setf (path-of uri) (path-of application)))
+    (unless (hu.dwim.uri:scheme-of uri)
+      (setf (hu.dwim.uri:scheme-of uri) (default-uri-scheme-of application)))
+    (setf (hu.dwim.uri:path-of uri) (path-of application)))
   (:method progn (uri (frame frame))
-    (setf (uri/query-parameter-value uri +frame-id-parameter-name+) (id-of frame))
-    (setf (uri/query-parameter-value uri +frame-index-parameter-name+) (frame-index-of frame)))
+    (setf (hu.dwim.uri:query-parameter-value uri +frame-id-parameter-name+) (id-of frame))
+    (setf (hu.dwim.uri:query-parameter-value uri +frame-index-parameter-name+) (frame-index-of frame)))
   (:method progn (uri (action action))
-    (setf (uri/query-parameter-value uri +action-id-parameter-name+) (id-of action))
-    (setf (uri/query-parameter-value uri +frame-index-parameter-name+) (next-frame-index-of *frame*)))
+    (setf (hu.dwim.uri:query-parameter-value uri +action-id-parameter-name+) (id-of action))
+    (setf (hu.dwim.uri:query-parameter-value uri +frame-index-parameter-name+) (next-frame-index-of *frame*)))
   (:method-combination progn))
 
 (def special-variable *action-js-event-handlers*)
@@ -196,9 +197,9 @@
            (check-type value string)
            (make-instance 'hu.dwim.walker:constant-form :value value)))
     (bind ((href (etypecase action
-                   (null   nil)
-                   (action (apply 'register-action/href action action-arguments))
-                   (uri    (uri/print-to-string action)))))
+                   (null            nil)
+                   (action          (apply 'register-action/href action action-arguments))
+                   (hu.dwim.uri:uri (hu.dwim.uri:print-uri-to-string action)))))
       ;; TODO the branches of this if should either be in two separate functions, or an assert should be added for ignored &key arguments in the true branch (ajax, send-client-state, subject-dom-node, sync)
       (if js
           `js-onload(hdws.io.connect-action-event-handler

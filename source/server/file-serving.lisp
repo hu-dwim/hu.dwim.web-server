@@ -122,11 +122,11 @@
         (cond
           ((iolib.os:directory-exists-p absolute-file-path)
            (when (render-directory-index? broker)
-             (if (path-had-leading-slash? (uri-of *request*))
+             (if (hu.dwim.uri:path-had-leading-slash? (uri-of *request*))
                  (produce-response/directory-serving/directory broker absolute-file-path uri-path relative-path root-directory)
                  (make-redirect-response (aprog1
                                              (clone-request-uri)
-                                           (setf (path-had-leading-slash? it) #t))))))
+                                           (setf (hu.dwim.uri:path-had-leading-slash? it) #t))))))
           (t
            (produce-response/directory-serving/file broker absolute-file-path uri-path relative-path root-directory)))))))
 
@@ -299,8 +299,8 @@
   (declare (ignore uri-path relative-path))
   (labels ((render-url (path name)
              <a (:href ,(etypecase path
-                          (string (uri/percent-encoding/encode path))
-                          (uri (uri/print-to-string path))))
+                          (string          (hu.dwim.uri:percent-encoding/encode path)) ; it's ok to encode, these are single file names consisting of unpredictable characters
+                          (hu.dwim.uri:uri (hu.dwim.uri:print-uri-to-string path))))
                 ,name>)
            (render-file (name path)
              <tr <td ,(render-url name name)>
@@ -320,7 +320,7 @@
                  (:symbolic-link)))))
      <table
        <tr <td ,(bind ((parent-uri (clone-request-uri)))
-                  (setf (path-of parent-uri) (butlast (path-of parent-uri)))
+                  (setf (path-of parent-uri) (butlast (hu.dwim.uri:path-of parent-uri)))
                   (render-url parent-uri "[parent directory]"))>
            <td>>
        ,(progn

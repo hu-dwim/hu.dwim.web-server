@@ -84,18 +84,18 @@
                    (if event.ctrlKey 2 0)
                    (if (or event.altKey event.metaKey) 4 0))))
     (return (hdws.append-query-parameter url
-                                        #.(uri/percent-encoding/encode +modifier-keys-parameter-name+)
-                                        value))))
+                                         #.(hu.dwim.uri:percent-encoding/encode +modifier-keys-parameter-name+)
+                                         value))))
 
 #+nil ; currently unused
 (defun hdws.decorate-url-with-frame-and-action (url (frame-id hdws.frame-id) (frame-index hdws.frame-index) action-id)
   (setf url (+ url (if (< (.index-of url "?") 0)
                        "?"
                        "&")))
-  (setf url (+ url #.(uri/percent-encoding/encode +frame-id-parameter-name+)    "=" (encodeURIComponent frame-id)
-               "&" #.(uri/percent-encoding/encode +frame-index-parameter-name+) "=" (encodeURIComponent frame-index)))
+  (setf url (+ url #.(hu.dwim.uri:percent-encoding/encode +frame-id-parameter-name+)    "=" (encodeURIComponent frame-id)
+               "&" #.(hu.dwim.uri:percent-encoding/encode +frame-index-parameter-name+) "=" (encodeURIComponent frame-index)))
   (when action-id
-    (setf url (+ url "&" #.(uri/percent-encoding/encode +action-id-parameter-name+) "=" (encodeURIComponent action-id))))
+    (setf url (+ url "&" #.(hu.dwim.uri:percent-encoding/encode +action-id-parameter-name+) "=" (encodeURIComponent action-id))))
   (return url))
 
 (defun hdws.absolute-url-from (url)
@@ -145,8 +145,8 @@
   (when event
     (setf url (hdws.decorate-url-with-modifier-keys url event)))
   (bind ((decorated-url (hdws.append-query-parameter url
-                                                    #.(uri/percent-encoding/encode +ajax-aware-parameter-name+)
-                                                    (if ajax "t" "")))
+                                                     #.(hu.dwim.uri:percent-encoding/encode +ajax-aware-parameter-name+)
+                                                     (if ajax "t" "")))
          (form (aref document.forms 0)))
     (if ajax
         (bind ((ajax-target (dojo.byId subject-dom-node))

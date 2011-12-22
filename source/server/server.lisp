@@ -316,11 +316,11 @@
                                                                                  :key ssl-key
                                                                                  :password ssl-key-password)))
                         (setf *request* (read-request server client-stream/iolib client-stream/ssl))
-                        (setf *remaining-query-path-elements* (path-of (uri-of *request*)))
+                        (setf *remaining-query-path-elements* (hu.dwim.uri:path-of (uri-of *request*)))
                         (with-error-log-decorators ((make-error-log-decorator
                                                       (format t "~%User agent: ~S" (header-value *request* +header/user-agent+)))
                                                     (make-error-log-decorator
-                                                      (format t "~%Request URL: ~S" (uri/print-to-string (uri-of *request*)))))
+                                                      (format t "~%Request URL: ~S" (hu.dwim.uri:print-uri-to-string (uri-of *request*)))))
                           (loop
                             (with-simple-restart (retry-handling-request "Try again handling this HTTP request")
                               (when (and *response*
@@ -445,7 +445,7 @@
                                       client-stream/iolib)
                    :client-stream/iolib client-stream/iolib
                    :client-stream/ssl client-stream/ssl
-                   :query-parameters (query-parameters-of uri) ; will only contain params coming in the http body after calling ENSURE-HTTP-REQUEST-BODY-IS-PARSED
+                   :query-parameters (hu.dwim.uri:query-parameters-of uri) ; will only contain params coming in the http body after calling ENSURE-HTTP-REQUEST-BODY-IS-PARSED
                    :http-method http-method
                    :http-version-string version-string
                    :http-major-version major-version
@@ -641,7 +641,7 @@
   (awhen size
     (setf content-disposition (string+ content-disposition ";size=" it)))
   (awhen file-name
-    (setf content-disposition (string+ content-disposition ";filename=\"" (uri/percent-encoding/encode it) "\"")))
+    (setf content-disposition (string+ content-disposition ";filename=\"" (hu.dwim.uri:percent-encoding/encode it) "\"")))
   content-disposition)
 
 (def function serve-stream (input-stream &key

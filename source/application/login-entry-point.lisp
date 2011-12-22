@@ -60,7 +60,7 @@
                            ((and continue-url
                                  *session*
                                  (is-logged-in? *session*))
-                            (bind ((target-uri (parse-uri continue-url)))
+                            (bind ((target-uri (hu.dwim.uri:parse-uri continue-url)))
                               (decorate-uri-for-current-application target-uri)
                               (make-redirect-response target-uri)))
                            (t

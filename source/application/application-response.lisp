@@ -8,7 +8,7 @@
 
 (def function decorate-session-cookie (application response)
   ;; this function is only called when we are sending back a response after creating a session
-  (bind ((hostname (host-of (uri-of *request*))))
+  (bind ((hostname (hu.dwim.uri:host-of (uri-of *request*))))
     ;; TODO assert against double additions?
     (app.debug "Decorating response ~A with the session cookie for session ~S" response *session*)
     (add-cookie (make-cookie
@@ -109,16 +109,16 @@
 (def (function e) make-redirect-response-with-frame-parameters-decorated (&optional (frame *frame*))
   (bind ((uri (clone-request-uri)))
     (assert (and frame (not (null (id-of frame)))))
-    (setf (uri/query-parameter-value uri +frame-id-parameter-name+) (id-of frame))
-    (setf (uri/query-parameter-value uri +frame-index-parameter-name+) (frame-index-of frame))
+    (setf (hu.dwim.uri:query-parameter-value uri +frame-id-parameter-name+) (id-of frame))
+    (setf (hu.dwim.uri:query-parameter-value uri +frame-index-parameter-name+) (frame-index-of frame))
     (make-redirect-response uri)))
 
 (def (function e) make-uri-for-current-application (&optional relative-path)
   (bind ((uri (clone-request-uri)))
-    (uri/delete-all-query-parameters uri)
+    (hu.dwim.uri:delete-all-query-parameters uri)
     (decorate-uri-for-current-application uri)
     (when relative-path
-      (uri/append-path uri relative-path))
+      (hu.dwim.uri:append-path uri relative-path))
     uri))
 
 (def (function e) decorate-uri-for-current-application (uri)
@@ -132,7 +132,7 @@
 
 (def function make-uri-for-current-frame ()
   (bind ((uri (clone-request-uri)))
-    (setf (uri/query-parameter-value uri +action-id-parameter-name+) nil)
+    (setf (hu.dwim.uri:query-parameter-value uri +action-id-parameter-name+) nil)
     (decorate-uri uri *frame*)
     uri))
 
@@ -140,8 +140,8 @@
   (bind ((uri (clone-request-uri)))
     (decorate-uri uri *application*)
     (decorate-uri uri *session*)
-    (setf (uri/query-parameter-value uri +frame-id-parameter-name+) nil)
-    (setf (uri/query-parameter-value uri +frame-index-parameter-name+) nil)
+    (setf (hu.dwim.uri:query-parameter-value uri +frame-id-parameter-name+) nil)
+    (setf (hu.dwim.uri:query-parameter-value uri +frame-index-parameter-name+) nil)
     uri))
 
 (def (function e) make-redirect-response-for-current-application (&optional relative-path)

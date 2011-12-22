@@ -107,8 +107,8 @@
   (bind ((listen-entry (first (listen-entries-of server)))
          (host (address-to-string (host-of listen-entry)))
          (port (port-of listen-entry))
-         (uri (make-uri :scheme "http" :host host :port port))
-         (uri-string (uri/print-to-string uri)))
+         (uri (hu.dwim.uri:make-uri :scheme "http" :host host :port port))
+         (uri-string (hu.dwim.uri:print-uri-to-string uri)))
     (format nil "Server ~A is now running. You can use (~S) to stop it, or select an appropriate restart if you see this inside the debugger. See also ~S and ~S.~%~
                  You may stress the server with one of the command lines below, but keep in mind that logging and generally not loading the code in ~S severly hurts performance.~%~
                  siege --concurrent=100 --time=10S ~A (add -b for full throttle benchmarking)~%~

@@ -66,8 +66,9 @@
     (shrink-vector buffer/lisp position)))
 
 (def (function o) parse-http-request/head (buffer https?)
-  (handler-bind ((uri-parse-error (lambda (error)
-                                    (illegal-http-request/error (princ-to-string error)))))
+  (handler-bind ((hu.dwim.uri:uri-parse-error
+                  (lambda (error)
+                    (illegal-http-request/error (princ-to-string error)))))
     (bind (((:values http-method raw-uri version-string position) (parse-http-request-line buffer)))
       (http.dribble "In PARSE-HTTP-REQUEST/HEAD; http-method is ~S, raw-uri is ~S, version is ~S" http-method raw-uri version-string)
       (bind (((:values major-version minor-version) (parse-http-version version-string))
@@ -88,8 +89,8 @@
                              (replace result host :start1 (incf position #.(length "://")))
                              (replace result raw-uri :start1 (incf position host-length))
                              result))
-               (uri (parse-uri uri-string)))
-          (http.dribble "Request query parameters from the uri: ~S" (query-parameters-of uri))
+               (uri (hu.dwim.uri:parse-uri uri-string)))
+          (http.dribble "Request query parameters from the uri: ~S" (hu.dwim.uri:query-parameters-of uri))
           ;; extend the parameters with the possible stuff in the request body
           ;; making sure duplicate entries are recorded in a list keeping the original order.
           (values http-method raw-uri version-string major-version minor-version
@@ -336,9 +337,9 @@
                    (http.dribble "Parsing application/x-www-form-urlencoded body. Attributes: ~S, value: ~S" attributes buffer-as-string)
                    ;; TODO buffer-as-string should never be non-ascii... read up on the standard, do something about that coerce...
                    (setf buffer-as-string (coerce buffer-as-string 'simple-base-string))
-                   (return-from parse-http-request/body (uri/parse-query-parameters buffer-as-string
-                                                                                    :initial-parameters final-parameter-alist
-                                                                                    :sideffect-initial-parameters #t)))))
+                   (return-from parse-http-request/body (hu.dwim.uri:parse-query-parameters buffer-as-string
+                                                                                            :initial-parameters final-parameter-alist
+                                                                                            :sideffect-initial-parameters #t)))))
               ("multipart/form-data"
                (http.dribble "Parsing multipart/form-data body. Attributes: ~S." attributes)
                (bind ((boundary (cdr (assoc "boundary" attributes :test #'string=)))
@@ -349,9 +350,9 @@
                                            (make-rfc2388-callback-factory
                                             (lambda (name value)
                                               ;; FIXME using internals
-                                              (hu.dwim.util::record-query-parameter (cons name value) final-parameter-alist))
+                                              (hu.dwim.uri::record-query-parameter (cons name value) final-parameter-alist))
                                             (lambda (name file-mime-part)
-                                              (hu.dwim.util::record-query-parameter (cons name file-mime-part) final-parameter-alist))))
+                                              (hu.dwim.uri::record-query-parameter (cons name file-mime-part) final-parameter-alist))))
                  (return-from parse-http-request/body final-parameter-alist)))
               (t (illegal-http-request/error "Don't know how to handle content type ~S" content-type))))))))
   (http.debug "Skipped parsing request body, raw Content-Type is [~S], raw Content-Length is [~S]" raw-content-type raw-content-length)

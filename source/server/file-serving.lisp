@@ -320,7 +320,7 @@
                  (:symbolic-link)))))
      <table
        <tr <td ,(bind ((parent-uri (clone-request-uri)))
-                  (setf (path-of parent-uri) (butlast (hu.dwim.uri:path-of parent-uri)))
+                  (setf (hu.dwim.uri:path-of parent-uri) (butlast (hu.dwim.uri:path-of parent-uri)))
                   (render-url parent-uri "[parent directory]"))>
            <td>>
        ,(progn

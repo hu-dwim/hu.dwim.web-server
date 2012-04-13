@@ -223,6 +223,8 @@
                               ((#.(char-code #\Space)
                                 #.(char-code #\Tab))
                                (name/skip-whitespace))
+                              (#.+carriage-return+
+                               (fail-unless-linefeed))
                               (t
                                (setf value/start-position (1- position))
                                (value))))

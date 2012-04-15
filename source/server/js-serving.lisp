@@ -23,8 +23,10 @@
 (def method directory-serving/resolve-uri-to-absolute-file-path ((broker js-directory-serving-broker) (uri-path list) (relative-path list)
                                                                  (root-directory iolib.pathnames:file-path))
   (bind ((suffix ".js")
-         (file-name (last-elt relative-path)))
-    (when (ends-with-subseq suffix file-name)
+         (file-name (unless (length= 0 relative-path)
+                      (last-elt relative-path))))
+    (when (and file-name
+               (ends-with-subseq suffix file-name))
       (bind ((relative-path/lisp (append (butlast relative-path)
                                          (list (string+ (subseq file-name 0 (- (length file-name) (length suffix)))
                                                         ".lisp")))))

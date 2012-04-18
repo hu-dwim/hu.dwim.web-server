@@ -159,11 +159,13 @@
                                            ;; this will force the recompilation below
                                            :file-write-date most-negative-fixnum))))
       (bind (((:slots bytes-to-respond last-used-at content-encoding content-type file-write-date) cache-entry))
-        (if (<= file-write-date/on-disk file-write-date)
-            (files.debug "Found valid cached entry for ~A, in ~A" absolute-file-path broker)
+        (if (or (> file-write-date/on-disk file-write-date)
+                (and (typep bytes-to-respond 'iolib.pathnames:file-path)
+                     (not (iolib.os:regular-file-exists-p bytes-to-respond))))
             (progn
               (update-directory-serving-broker/cache-entry broker cache-entry absolute-file-path relative-path root-directory response-compression)
-              (setf file-write-date file-write-date/on-disk)))
+              (setf file-write-date file-write-date/on-disk))
+            (files.debug "Found valid cached entry for ~A, in ~A" absolute-file-path broker))
         (setf last-used-at (get-monotonic-time))
         (when (and cache
                    (not cache-entry-found?))

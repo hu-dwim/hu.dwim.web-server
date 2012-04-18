@@ -217,7 +217,8 @@
 (def special-variable *file-compression/file-extension-blacklist*
   (aprog1
       (make-hash-table :test #'equal)
-    (dolist (el '("png" "jpg" "jpeg" "gif"))
+    (dolist (el '("png" "jpg" "jpeg" "gif"
+                  "z" "bz2" "gz" "tgz" "rar" "zip" "7z"))
       (setf (gethash el it) t))))
 
 (def function compress-file-before-serving? (file)

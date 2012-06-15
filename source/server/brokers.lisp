@@ -147,8 +147,8 @@
     (server.debug "Trying to match ~A; path is ~S, remaining-query-path is ~S" broker broker-path *remaining-query-path-elements*)
     (when (<= broker-path-length
               (length *remaining-query-path-elements*))
-      (iter (for broker-el :in broker-path)
-            (for query-el :in *remaining-query-path-elements*)
+      (iter (for broker-el :in (or broker-path '("")))
+            (for query-el :in (or *remaining-query-path-elements* '("")))
             (unless (string= broker-el query-el)
               (return))
             (finally

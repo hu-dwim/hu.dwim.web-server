@@ -143,12 +143,15 @@
 
 (def method call-if-matches-request ((broker broker-at-path) request thunk)
   (bind ((broker-path (path-of broker))
-         (broker-path-length (length broker-path)))
-    (server.debug "Trying to match ~A; path is ~S, remaining-query-path is ~S" broker broker-path *remaining-query-path-elements*)
-    (when (<= broker-path-length
-              (length *remaining-query-path-elements*))
-      (iter (for broker-el :in (or broker-path '("")))
-            (for query-el :in (or *remaining-query-path-elements* '("")))
+         (broker-path-length (length broker-path))
+         (length-matches? (if (zerop broker-path-length)
+                              (length= 0 *remaining-query-path-elements*)
+                              (<= broker-path-length
+                                  (length *remaining-query-path-elements*)))))
+    (server.debug "Trying to match ~A; broker-path is ~S, remaining-query-path is ~S" broker broker-path *remaining-query-path-elements*)
+    (when length-matches?
+      (iter (for broker-el :in broker-path)
+            (for query-el :in *remaining-query-path-elements*)
             (unless (string= broker-el query-el)
               (return))
             (finally

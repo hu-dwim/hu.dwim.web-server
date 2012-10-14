@@ -722,7 +722,7 @@
                                    (mime-types-for-extension it)))))
           (unless content-type/provided?
             (setf content-type (or (content-type-for mime-type encoding)
-                                   (content-type-for +plain-text-mime-type+ encoding))))
+                                   +octet-stream-mime-type+)))
           (when (and mime-type
                      (not for-download/provided?))
             (setf for-download (mime-time-for-download? mime-type)))

@@ -48,7 +48,7 @@
                              (+xhtml-mime-type+      +iso-8859-1-xhtml-content-type+)
                              (+css-mime-type+        +iso-8859-1-css-content-type+)
                              (+javascript-mime-type+ +iso-8859-1-javascript-content-type+))))))
-        (string+ mime-type "; charset=" (string-downcase encoding)))))
+        (string+ mime-type ";charset=" (string-downcase encoding)))))
 
 (def (constant e) +html-content-type+         (content-type-for +html-mime-type+         +default-encoding+))
 (def (constant e) +xhtml-content-type+        (content-type-for +xhtml-mime-type+        +default-encoding+))

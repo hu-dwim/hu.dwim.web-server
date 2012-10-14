@@ -9,6 +9,6 @@
 ;;;;;;
 ;;; HTTP port
 
-;; KLUDGE move to meta-model or somewhere else because this is not general enough, and can not be project independent: https, or not, starting multiple services on multiple ports, same service listening on multiple ports, etc...
+;; KLUDGE get rid of this, it's not general enough, and can inherently project dependent: https, or not, starting multiple services on multiple ports, same service listening on multiple ports, etc...
 (def (constant e) +default-http-server-port+ 8080)
 

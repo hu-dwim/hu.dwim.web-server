@@ -42,6 +42,7 @@ Issues:
  - there's no support on the server side to make single-shot actions
  - rendering actions in command.lisp is a mess
  - the slot name 'ajax' is used for storing a dom-id, which is not suggested by its name
-* TODO [#A] session cookies don't work through ip addresses on chrome and opera :Unassigned:minor:BUG
+* TODO [#C] try to conflate applications/entry-points/servers into a uniform tree of brokers  :Unassigned:minor:TASK:
+* DONE [#A] cookies are not stored when accessed through ip addresses or localhost :Unassigned:minor:BUG
   - Note taken on [2010-08-28 Sat 22:22] \\
-    seems like cookies in a 302 redirect response are not stored when they are ip addresses.
+    that's a browser design decision: http://code.google.com/p/chromium/issues/detail?id=56211

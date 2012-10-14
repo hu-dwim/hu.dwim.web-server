@@ -104,6 +104,7 @@
         (error "Could not find session ~S of application ~A" session-id application))))
 
 (def (function o) find-session-from-request (application)
+  ;; TODO ? deal with situations when there are multiple cookies returned due to e.g. some having been installed on overlapping erroneous paths
   (bind ((session-id (cookie-value +session-cookie-name+))
          (cookie-exists? (not (null session-id)))
          (session nil)

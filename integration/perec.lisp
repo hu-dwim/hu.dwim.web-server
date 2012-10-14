@@ -13,6 +13,7 @@
   (hu.dwim.rdbms:with-database (database-of application)
     (call-next-method)))
 
+;; TODO move this logic into produce-response/application or equivalent
 (def method call-in-application-environment :around ((application application-with-perec-support) session thunk)
   (bind ((database (database-of application)))
     (unless database

@@ -170,7 +170,7 @@
 (def (function e) request-cookie-value (request cookie &key domain (otherwise nil))
   "Return the uri-unescaped cookie value from REQUEST or OTHERWISE if not found."
   (aif (find-request-cookies request cookie :accepted-domains (ensure-list domain))
-       ;; we take the first because cookies are in such an order that the one with the most specific path is at the head of the list
+       ;; we take the first one because cookies are in such an order that the one with the most specific path is at the head of the list
        ;; (this ordering does NOT apply to domains, and ff sends them in random order if the only difference is the domain! baaaaah... see comments at: http://www.nczonline.net/blog/2009/05/05/http-cookies-explained/ because of this the session id cookie of foo.com and dev.foo.com cannot be separated using a shared web server process)
        ;; normally we want the most specific one to be returned, otherwise use the more generic FIND-REQUEST-COOKIES call
        (hu.dwim.uri:percent-encoding/decode (rfc2109:cookie-value (first it)))
@@ -240,10 +240,11 @@
 ;;;;;;
 ;;; Functional response
 
+;; TODO review the naming in this section...
 (def (class* e) functional-response (primitive-http-response)
   ((thunk :type (or symbol function))
    (cleanup-thunk nil :type (or symbol function)))
-  (:documentation "A primitive-response that sends the headers and then calling its thunk. Keep in mind that it will not do any buffering, so it uses up a worker thread while sending the response through the network."))
+  (:documentation "A primitive-response that sends the headers and then calls its thunk. Keep in mind that it will not do any buffering, so it uses up a worker thread while sending the response through the network."))
 
 (def method send-response ((response functional-response))
   (call-next-method)

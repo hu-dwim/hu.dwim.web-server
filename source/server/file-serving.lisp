@@ -109,6 +109,7 @@
   (:method (broker (uri-path list) (relative-path list) (root-directory iolib.pathnames:file-path))
     (if (zerop (length relative-path))
         root-directory
+        ;; TODO comment on the usage of ignore errors, or delete...
         (ignore-errors (iolib.os:resolve-file-path (join-strings relative-path #\/) :defaults root-directory)))))
 
 (def generic produce-response/directory-serving (broker uri-path relative-path root-directory)

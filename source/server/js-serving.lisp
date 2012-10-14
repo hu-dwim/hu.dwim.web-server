@@ -30,6 +30,7 @@
       (bind ((relative-path/lisp (append (butlast relative-path)
                                          (list (string+ (subseq file-name 0 (- (length file-name) (length suffix)))
                                                         ".lisp")))))
+        ;; TODO comment on the usage of ignore errors, or delete...
         (ignore-errors
           (iolib.os:resolve-file-path (join-strings relative-path/lisp #\/) :defaults root-directory))))))
 

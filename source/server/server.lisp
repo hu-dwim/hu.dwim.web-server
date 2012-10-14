@@ -496,7 +496,7 @@
                                      (bind ((http-date-string (subseq if-modified-since 0 (position #\; if-modified-since :test #'char=))))
                                        (parse-http-timestring http-date-string
                                                               :otherwise (lambda ()
-                                                                           (server.error "Failed to parse If-Modified-Since header value ~S" if-modified-since)))))))
+                                                                           (server.warn "Failed to parse If-Modified-Since header value ~S" if-modified-since)))))))
     (when seconds-until-expires
       (server.dribble "~A: setting up cache control according to seconds-until-expires ~S" name seconds-until-expires)
       (if (<= seconds-until-expires 0)

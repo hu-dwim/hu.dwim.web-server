@@ -92,7 +92,7 @@
 
 (def special-variable *action-js-event-handlers*)
 
-(appendf *xhtml-body-environment-wrappers* '(action-js-event-handlers/wrapper))
+(pushnew 'action-js-event-handlers/wrapper *xhtml-body-environment-wrappers*)
 
 (def function action-js-event-handlers/wrapper (thunk)
   (bind ((*action-js-event-handlers* '()))

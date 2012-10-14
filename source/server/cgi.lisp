@@ -26,6 +26,8 @@
     nil
     :type (or null function-designator)
     :documentation "Will be invoked with the IOLIB.PATHNAMES:FILE-PATH of the CGI executable, and must produce a list of strings passed on to IOLIB.OS:RUN-PROGRAM.")
+   ;; TODO delme?
+   #+nil
    (redirect-for-trailing-slash
     #f
     :type boolean

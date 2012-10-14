@@ -35,6 +35,7 @@ Custom implementations should look something like this:
 (def (generic e) produce-response/application (application request)
   (:documentation "Just like PRODUCE-RESPONSE, but only the inner part which is wrapped by the application related bookkeping."))
 
+;; TODO rename, because this method only gets called from within with-session-logic
 (def (generic e) call-in-application-environment (application session thunk)
   (:documentation "Everything related to an application goes through this method, so it can be used to set up wrappers like WITH-TRANSACTION. The SESSION argument may or may not be a valid session.")
   (:method (application session thunk)

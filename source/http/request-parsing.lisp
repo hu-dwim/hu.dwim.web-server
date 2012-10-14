@@ -68,6 +68,7 @@
 (def (function o) parse-http-request/head (buffer https?)
   (handler-bind ((hu.dwim.uri:uri-parse-error
                   (lambda (error)
+                    ;; TODO should store the original error somehow, e.g. using nested-condition
                     (illegal-http-request/error (princ-to-string error)))))
     (bind (((:values http-method raw-uri version-string position) (parse-http-request-line buffer)))
       (http.dribble "In PARSE-HTTP-REQUEST/HEAD; http-method is ~S, raw-uri is ~S, version is ~S" http-method raw-uri version-string)
@@ -330,14 +331,13 @@
                  (read-sequence buffer stream)
                  (bind ((buffer-as-string
                          (aif (cdr (assoc "charset" attributes :test #'string=))
-                              ;; TODO check the standard, disable unescape in parse-query-parameters if needed...
                               (eswitch (it :test #'string-equal)
                                 ("utf-8"      (utf-8-octets-to-string buffer))
                                 ("ascii"      (us-ascii-octets-to-string buffer))
                                 ("iso-8859-1" (iso-8859-1-octets-to-string buffer)))
                               (us-ascii-octets-to-string buffer))))
                    (http.dribble "Parsing application/x-www-form-urlencoded body. Attributes: ~S, value: ~S" attributes buffer-as-string)
-                   ;; TODO buffer-as-string should never be non-ascii... read up on the standard, do something about that coerce...
+                   ;; TODO buffer-as-string should never be non-ascii? read up on the standard, do something about that coerce...
                    (setf buffer-as-string (coerce buffer-as-string 'simple-base-string))
                    (return-from parse-http-request/body (hu.dwim.uri:parse-query-parameters buffer-as-string
                                                                                             :initial-parameters final-parameter-alist
@@ -345,7 +345,7 @@
               ("multipart/form-data"
                (http.dribble "Parsing multipart/form-data body. Attributes: ~S." attributes)
                (bind ((boundary (cdr (assoc "boundary" attributes :test #'string=)))
-                      ;; no need to copy the alist, because we only push to its head
+                      ;; no need to copy the alist and explicitly return it, because we are only pushing to its head
                       (final-parameter-alist initial-parameter-alist))
                  ;; TODO DOS prevention: add support for rfc2388-binary to limit parsing length if the ContentLength header is fake, pass in *length-limit/http-request-body*
                  (rfc2388-binary:read-mime stream boundary

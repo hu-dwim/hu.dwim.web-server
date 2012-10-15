@@ -92,7 +92,9 @@
 
 (def special-variable *action-js-event-handlers*)
 
-(pushnew 'action-js-event-handlers/wrapper *xhtml-body-environment-wrappers*)
+(unless (member 'action-js-event-handlers/wrapper *xhtml-body-environment-wrappers*)
+  ;; NOTE: not pushnew, because we need it at the end, so that other wrappers are already in effect before this
+  (appendf *xhtml-body-environment-wrappers* '(action-js-event-handlers/wrapper)))
 
 (def function action-js-event-handlers/wrapper (thunk)
   (bind ((*action-js-event-handlers* '()))

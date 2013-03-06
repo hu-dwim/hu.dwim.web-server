@@ -4,12 +4,9 @@
 ;;;
 ;;; See LICENCE for details.
 
-(load-system :hu.dwim.asdf)
-
-(in-package :hu.dwim.asdf)
-
 (defsystem :hu.dwim.web-server.application
-  :class hu.dwim.system
+  :defsystem-depends-on (:hu.dwim.asdf)
+  :class "hu.dwim.asdf:hu.dwim.system"
   :description "Application logic (sessions, etc) based on hu.dwim.web-server."
   :long-description "Provides application, session, frame, action and entry point abstractions over the basic hu.dwim.web-server infrastrucutre."
   :depends-on (:hu.dwim.web-server)

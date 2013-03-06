@@ -4,12 +4,9 @@
 ;;;
 ;;; See LICENCE for details.
 
-(load-system :hu.dwim.asdf)
-
-(in-package :hu.dwim.asdf)
-
 (defsystem :hu.dwim.web-server
-  :class hu.dwim.system
+  :defsystem-depends-on (:hu.dwim.asdf)
+  :class "hu.dwim.asdf:hu.dwim.system"
   :description "An iolib based HTTP server."
   :long-description "Provides error handling, response compression, static file serving, quasi quoted JavaScript and quasi quoted XML serving."
   :depends-on (:babel

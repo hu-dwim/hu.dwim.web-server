@@ -21,7 +21,7 @@
                :hu.dwim.def+cl-l10n
                :hu.dwim.def+contextl ; TODO no need for contextl here, factor out remaining dependencies
                :hu.dwim.def+hu.dwim.delico
-               :hu.dwim.logger
+               :hu.dwim.logger+iolib
                :hu.dwim.quasi-quote.xml+hu.dwim.quasi-quote.js
                :hu.dwim.syntax-sugar
                :hu.dwim.uri
@@ -73,7 +73,7 @@
                                            (:file "server" :depends-on ("variables" "error-handling"))
                                            (:file "variables" :depends-on ("api"))))))))
 
-(defmethod perform :after ((op develop-op) (system (eql (find-system :hu.dwim.web-server))))
+(defmethod perform :after ((op hu.dwim.asdf:develop-op) (system (eql (find-system :hu.dwim.web-server))))
   (let ((*package* (find-package :hu.dwim.web-server)))
     (eval
      (read-from-string

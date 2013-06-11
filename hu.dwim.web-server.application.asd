@@ -26,5 +26,5 @@
                                            (:file "session-logic" :depends-on ("session" "application"))
                                            (:file "variables")))))))
 
-(defmethod perform :before ((op develop-op) (system (eql (find-system :hu.dwim.web-server.application))))
-  (develop-system :hu.dwim.web-server))
+(defmethod perform :before ((op hu.dwim.asdf:develop-op) (system (eql (find-system :hu.dwim.web-server.application))))
+  (hu.dwim.asdf:develop-system :hu.dwim.web-server))

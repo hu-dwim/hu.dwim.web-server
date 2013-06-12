@@ -51,7 +51,7 @@
                              (:module "http"
                               :depends-on ("logger" "util")
                               :components ((:file "headers" :depends-on ("conditions" "util" "variables"))
-                                           (:file "conditions")
+                                           (:file "conditions" :depends-on ("variables"))
                                            (:file "production")
                                            (:file "request-parsing" :depends-on ("headers" "uri" "variables"))
                                            (:file "uri" :depends-on ("conditions" "variables"))

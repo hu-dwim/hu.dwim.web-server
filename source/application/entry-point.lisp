@@ -113,20 +113,23 @@
        ,@(iter (for entry :in entries)
                (collect `(def (entry-point ,@-options-) (,application ,@entry)))))))
 
-(def (definer e) file-serving-entry-point (application path root-directory &key priority)
+(def (definer e) file-serving-entry-point (application path root-directory &key allow-access-to-external-files priority)
   ;; TODO it should dispatch on (cl-fad:directory-pathname-p root-directory) to chose the type, but at macroexpand time root-directory can be a form, not only a pathname
   `(def (entry-point ,@-options-) (,application directory-serving-broker
                                                 :path ,path
                                                 :root-directory ,root-directory
+                                                :allow-access-to-external-files ,allow-access-to-external-files
                                                 :priority ,priority)))
 
 (def (definer e) file-serving-entry-points (application &body entries)
   (once-only (application)
     `(progn
        ,@(iter (for entry :in entries)
-               (bind (((path root-directory &key priority) entry))
+               (bind (((path root-directory &key allow-access-to-external-files priority) entry))
                  (collect `(def (file-serving-entry-point ,@-options-)
-                               ,application ,path ,root-directory :priority ,priority)))))))
+                               ,application ,path ,root-directory
+                               :allow-access-to-external-files ,allow-access-to-external-files
+                               :priority ,priority)))))))
 
 (def (definer e) js-file-serving-entry-point (application path root-directory &key priority)
   `(def (entry-point ,@-options-) (,application js-directory-serving-broker

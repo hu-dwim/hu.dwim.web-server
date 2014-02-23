@@ -8,7 +8,8 @@
   :defsystem-depends-on (:hu.dwim.asdf)
   :class "hu.dwim.asdf:hu.dwim.test-system"
   :package-name :hu.dwim.web-server.test
-  :depends-on (:hu.dwim.web-server.application
+  :depends-on (:hu.dwim.logger
+               :hu.dwim.web-server.application
                :hu.dwim.web-server.test)
   :components ((:module "test"
                 :components ((:module "applications"

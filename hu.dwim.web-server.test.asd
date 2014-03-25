@@ -9,6 +9,7 @@
   :class "hu.dwim.asdf:hu.dwim.test-system"
   :package-name :hu.dwim.web-server.test
   :depends-on (:drakma
+               :hu.dwim.computed-class+hu.dwim.logger ; cc compiles with logger optionally. in dev builds we must make sure the logger is also loaded in with it, because the fasl's depend on it.
                :hu.dwim.stefil+hu.dwim.def+swank
                :hu.dwim.web-server
                :hu.dwim.web-server+swank)

@@ -12,6 +12,9 @@
 (def (function e) clone-request-uri (&key (strip-query-parameters *clone-request-uri/default-strip-query-parameters*)
                                           append-to-path)
   (bind ((uri (hu.dwim.uri:clone-uri (uri-of *request*))))
+    (awhen (header-value *request* "X-Forwarded-Proto")
+      ;; if we are behind some proxy then this is the de facto standard way to tell us the originating protocol
+      (setf (hu.dwim.uri:scheme-of uri) it))
     (if (eq strip-query-parameters :all)
         (hu.dwim.uri:delete-all-query-parameters uri)
         (dolist (parameter-name (ensure-list strip-query-parameters))

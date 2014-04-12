@@ -140,7 +140,7 @@
                                    (nested-pipeline (make-js-transformation-pipeline :embedded-in-xml t :inline-into-xml-attribute t)))
                               (lambda ()
                                 ;; the js-inline qq syntax is only in inline-emitting mode when used lexically-below another qq reader.
-                                ;; this way it works as expected:
+                                ;; this way the following works as expected:
                                 ;; (some-function `js-inline(+ 2 40))
                                 ;; (def function some-function (on-click)
                                 ;;   <div (:on-click ,on-click)>)

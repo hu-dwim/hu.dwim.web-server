@@ -310,6 +310,12 @@
                         (when ssl-key
                           (server.debug "Wrapping stream ~A into an ssl server stream" client-stream/iolib)
                           ;; TODO decide/make sure network and/or ssl handshaking related errors are properly ignored similar to is-error-from-client-stream?
+                          ;; FIXME this can lead to hung threads here:
+                          ;; 1: (SB-SYS:WAIT-UNTIL-FD-USABLE 13 :INPUT NIL T)
+                          ;; 2: (CL+SSL:MAKE-SSL-SERVER-STREAM #<unavailable lambda list>)
+                          ;; inside (CL+SSL::INPUT-WAIT ... )
+                          ;; SSL-STREAM has a slot called DEADLINE, but it cannot be set before CL+SSL:MAKE-SSL-SERVER-STREAM returns
+                          ;; fe[nl]ix: attila_lendvai: try setting the file descriptor to blocking mode (setf (iolib.streams:fd-non-blocking socket) nil)
                           (setf client-stream/ssl (cl+ssl:make-ssl-server-stream (iolib.streams:fd-of client-stream/iolib)
                                                                                  :external-format nil
                                                                                  :certificate ssl-certificate
@@ -545,6 +551,9 @@
     ((nil)
      (values bytes-to-serve nil))
     (:deflate
+     ;; NOTE: deflate is not well supported with countless issue with countless browsers... don't use it!
+     ;; details on the deflate bug in IE and Konqueror: https://bugs.kde.org/show_bug.cgi?id=117683
+     ;; http://www.vervestudios.co/projects/compression-tests/results
      (bind (((:values compressed-bytes compressed-bytes-length) (hu.dwim.util:deflate-sequence bytes-to-serve :window-bits -15))
             (compressed-bytes (coerce-to-simple-ub8-vector compressed-bytes compressed-bytes-length)))
        (server.debug "COMPRESS-RESPONSE/SEQUENCE with deflate; original-size ~A, compressed-size ~A, ratio: ~,3F" (length bytes-to-serve) compressed-bytes-length (/ compressed-bytes-length (length bytes-to-serve)))
@@ -571,7 +580,6 @@
     (:gzip
      (not-yet-implemented "gzip response compression"))))
 
-;; details on the deflate bug in IE and Konqueror: https://bugs.kde.org/show_bug.cgi?id=117683
 (def function serve-sequence (input &key
                                     (compress-content-with (default-response-compression))
                                     (last-modified-at (local-time:now))

@@ -34,6 +34,7 @@
       (setf (cookies-of request)
             ;; if we called SAFE-PARSE-COOKIES here, then cookies that don't match the domain restrinctions were dropped.
             ;; instead we parse all cookies and let the users control what they will accept.
+            ;; FIXME because of this delayed parsing of cookies, we cannot turn cookie parsing errors into illegal-request errors.
             (aprog1
                 (rfc2109:parse-cookies (header-value request "Cookie"))
               (http.dribble "Parsed the cookies for the request: ~A" it)))))

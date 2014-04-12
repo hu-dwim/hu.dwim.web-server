@@ -43,6 +43,10 @@ Issues:
  - rendering actions in command.lisp is a mess
  - the slot name 'ajax' is used for storing a dom-id, which is not suggested by its name
 * TODO [#C] try to conflate applications/entry-points/servers into a uniform tree of brokers  :Unassigned:minor:TASK:
+* TODO on firefox the _m modifier key parameter accumulates when selecting tabs in a project page in hu.dwim.home :Unassigned:BUG:
+* DONE session cookies end up on path='/' when first visit comes through an entry point path, even though cookie path is set properly :Unassigned:BUG:
+  When visiting the site without a session cookie on the /project/foo entry point, then chrome (only?) registers the cookie on the
+path '/project', even though the Set-Cookie header we send to it contains a cookie with path '/'
 * DONE [#A] cookies are not stored when accessed through ip addresses or localhost :Unassigned:minor:BUG
   - Note taken on [2010-08-28 Sat 22:22] \\
     that's a browser design decision: http://code.google.com/p/chromium/issues/detail?id=56211

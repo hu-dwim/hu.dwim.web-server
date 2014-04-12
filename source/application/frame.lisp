@@ -91,6 +91,7 @@
       (app.debug "Found frame-id parameter ~S" frame-id)
       (setf frame-instance (gethash frame-id (frame-id->frame-of session)))
       (setf frame frame-instance)
+      (app.debug "Found frame ~S in the frame registry" frame)
       (when frame
         (bind ((alive? #f))
           (setf (values alive? invalidity-reason) (is-frame-alive? frame))

@@ -88,7 +88,7 @@
 
 (def (with-macro* eo) with-frame-logic (&key (requires-valid-frame #t) (ensure-frame #f))
   (assert (and *application* *session* (boundp '*frame*)) () "May not use WITH-FRAME-LOGIC without a proper session in the environment")
-  (app.debug "WITH-FRAME-LOGIC speaking, requires-valid-frame ~A, ensure-frame ~A" requires-valid-frame ensure-frame)
+  (app.debug "WITH-FRAME-LOGIC speaking, requires-valid-frame ~A, ensure-frame ~A, current session ~A" requires-valid-frame ensure-frame *session*)
   (bind ((application *application*)
          (session *session*)
          ((:values frame nil invalidity-reason frame-instance) (when session

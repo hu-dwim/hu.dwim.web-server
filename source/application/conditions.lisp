@@ -16,7 +16,7 @@
 (def function too-many-sessions (application)
   (error 'too-many-sessions :request *request* :application application))
 
-(def (condition* e) error/authentication (error)
+(def (condition* e) error/authentication (web-server-error)
   ())
 
 (def condition* error/login-failed (simple-error

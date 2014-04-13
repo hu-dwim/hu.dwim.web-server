@@ -25,7 +25,14 @@ TODO delme?
          :request request))
 |#
 
-(def condition* request-processing-error (error)
+(def (condition* e) web-server-error (error)
+  ())
+
+(def (condition* e) simple-web-server-error (web-server-error
+                                             simple-error)
+  ())
+
+(def condition* request-processing-error (web-server-error)
   ((request (when (boundp '*request*)
               *request*))))
 

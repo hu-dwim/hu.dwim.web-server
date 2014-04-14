@@ -322,6 +322,11 @@
                                                                                  :key ssl-key
                                                                                  :password ssl-key-password)))
                         (setf *request* (read-request server client-stream/iolib client-stream/ssl))
+                        (bind ((forwarded-for (header-value *request* +header/forwarded-for+)))
+                          (when forwarded-for
+                            (server.debug "Registering ~S header value: ~S" +header/forwarded-for+ forwarded-for)
+                            (setf *request-remote-address/string* forwarded-for)
+                            (setf *request-remote-address* (iolib.sockets:ensure-address forwarded-for))))
                         (setf *remaining-query-path-elements* (hu.dwim.uri:path-of (uri-of *request*)))
                         (with-error-log-decorators ((make-error-log-decorator
                                                       (format t "~%User agent: ~S" (header-value *request* +header/user-agent+)))

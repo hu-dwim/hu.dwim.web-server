@@ -326,7 +326,10 @@
                           (when forwarded-for
                             (server.debug "Registering ~S header value: ~S" +header/forwarded-for+ forwarded-for)
                             (setf *request-remote-address/string* forwarded-for)
-                            (setf *request-remote-address* (iolib.sockets:ensure-address forwarded-for))))
+                            (handler-case
+                                (setf *request-remote-address* (parse-x-forwarded-for-value forwarded-for))
+                              (error ()
+                                (server.warn "Failed to parse ~S header to set the value of ~S. The offending value was ~S." +header/forwarded-for+ '*request-remote-address* forwarded-for)))))
                         (setf *remaining-query-path-elements* (hu.dwim.uri:path-of (uri-of *request*)))
                         (with-error-log-decorators ((make-error-log-decorator
                                                       (format t "~%User agent: ~S" (header-value *request* +header/user-agent+)))

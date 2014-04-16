@@ -254,3 +254,9 @@ If the request contains a param (no distinction between GET and POST params is m
    :max-age max-age
    :path path
    :secure secure))
+
+(def function parse-x-forwarded-for-value (value)
+  (bind ((pieces (split-sequence:split-sequence #\, value)))
+    (setf pieces (mapcar 'string-trim-whitespace pieces))
+    (setf pieces (mapcar 'iolib:ensure-address pieces))
+    (values (first pieces) (rest pieces))))

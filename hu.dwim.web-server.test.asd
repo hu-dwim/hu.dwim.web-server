@@ -16,4 +16,5 @@
   :components ((:module "test"
                 :components ((:file "environment" :depends-on ("package"))
                              (:file "package")
+                             (:file "http" :depends-on ("environment"))
                              (:file "test-servers" :depends-on ("environment"))))))

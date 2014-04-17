@@ -84,12 +84,13 @@
                args))
       (call-next-method)))
 
-(def (function e) make-directory-serving-broker (path root-directory &key priority)
+(def (function e) make-directory-serving-broker (path root-directory &key priority allow-access-to-external-files)
   (check-type root-directory (or pathname iolib.pathnames:file-path-designator))
   (make-instance 'directory-serving-broker
                  :path path
                  :root-directory root-directory
-                 :priority priority))
+                 :priority priority
+                 :allow-access-to-external-files allow-access-to-external-files))
 
 (def method produce-response ((broker directory-serving-broker) (request http-request))
   (bind ((root-directory (root-directory-of broker))

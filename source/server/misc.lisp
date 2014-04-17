@@ -18,17 +18,20 @@
          handle-cgi-request
          ))
 
-(def function make-default-broker-list (&key (include-application-support #t))
+(def function make-default-broker-list (&key (path-prefix "") (include-application-support #t))
   "Returns a list of brokers that are needed in most situations."
   (bind ((priority 100))
     (append
      (list (make-instance 'js-directory-serving-broker
-                          :path "hdws/js"
+                          :path (string+ path-prefix "hdws/js")
                           :root-directory (system-relative-pathname :hu.dwim.web-server "source/js/")
                           :priority priority)
            (make-instance 'js-i18n-broker :priority priority))
      (when include-application-support
-       (list (make-directory-serving-broker "/static/hdws/" (system-relative-pathname :hu.dwim.web-server "www/") :priority priority))))))
+       (list (make-directory-serving-broker (string+ path-prefix "/static/hdws/")
+                                            (system-relative-pathname :hu.dwim.web-server "www/")
+                                            :priority priority
+                                            :allow-access-to-external-files t))))))
 
 ;;;;;;
 ;;; Server status

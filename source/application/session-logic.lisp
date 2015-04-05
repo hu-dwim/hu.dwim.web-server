@@ -28,7 +28,7 @@
                (sb-sys:without-interrupts
                  (unless (eq (sb-thread::mutex-%owner mutex) sb-thread:*current-thread*)
                    (sb-sys:allow-with-interrupts
-                     (sb-thread:get-mutex mutex)
+                     (sb-thread:grab-mutex mutex)
                      (setf application-lock-held? #t))))))
            (ensure-application-is-unlocked ()
              (sb-sys:without-interrupts

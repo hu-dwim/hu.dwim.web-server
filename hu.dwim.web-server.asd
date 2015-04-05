@@ -16,7 +16,7 @@
                :cl-fad ; TODO replace with iolib
                :cl+ssl
                :hu.dwim.common
-               :hu.dwim.computed-class+hu.dwim.defclass-star
+               :hu.dwim.computed-class
                :hu.dwim.def.namespace
                :hu.dwim.def+cl-l10n
                :hu.dwim.def+contextl ; TODO no need for contextl here, factor out remaining dependencies

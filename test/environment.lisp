@@ -96,7 +96,7 @@
                                                         &allow-other-keys)
   (when *test-server*
     (cerror "Start anyway" "*TEST-SERVER* is not NIL which means that there's a test server still running. You can use (SHUTDOWN-TEST-SERVER) to shut it down. See also *RUNNING-TEST-SERVERS*."))
-  (remove-from-plistf args :server-type)
+  (remove-from-plistf args :server-type :wait)
   (bind ((server (apply #'make-instance server-type :host host :port port :maximum-worker-count maximum-worker-count args)))
     (setf (brokers-of server) (ensure-list brokers))
     (if wait

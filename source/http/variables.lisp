@@ -91,6 +91,7 @@
    +header/last-modified+       "Last-Modified"
    +header/location+            "Location"
    +header/server+              "Server"
+   +header/upgrade+             "Upgrade"
    ))
 
 (macrolet ((x (&body entries)

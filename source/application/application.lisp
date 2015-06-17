@@ -36,6 +36,16 @@
    (ajax-enabled *default-ajax-enabled* :type boolean :accessor ajax-enabled? :export :accessor))
   (:default-initargs :path '()))
 
+(def method call-if-matches-request ((app application) request thunk)
+  (let ((*application* app))
+    (call-next-method)))
+
+(def method handle-request ((app application) request)
+  (debug-only (assert (and (boundp '*broker-stack*) (eq (first *broker-stack*) app))))
+  (let ((*application* app))
+    ;; tell ITERATE-BROKERS-FOR-RESPONSE to go on with a new set of brokers
+    (remove-if-not (lambda (ep) (typep ep 'broker)) (entry-points-of app))))
+
 (def (function e) make-frame-root-component (&optional content)
   (make-frame-root-component-using-application *application* *session* *frame* content))
 
@@ -69,11 +79,13 @@
                             (return-from broker-path-to-broker (nreverse path))))
                    :visit-type :path))
 
+(def method session-count ((broker application))
+  (hash-table-count (session-id->session-of broker)))
+
 (def function total-web-session-count (server)
   (bind ((sum 0))
     (map-broker-tree server (lambda (el)
-                              (when (typep el 'application)
-                                (incf sum (hash-table-count (session-id->session-of el))))))
+                              (incf sum (session-count el))))
     sum))
 
 (def function map-broker-tree (root visitor &key

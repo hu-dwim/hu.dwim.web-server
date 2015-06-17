@@ -81,7 +81,9 @@
           ;; record the broker who provided the new set of brokers on the *broker-stack*
           (bind ((*broker-stack* (cons broker *broker-stack*)))
             (server.debug "Broker ~A returned the new rules ~S, calling ITERATE-BROKERS-FOR-RESPONSE recursively" broker result)
-            (iterate-brokers-for-response visitor request initial-brokers result (1+ recursion-depth))))
+            (iter (for broker :in result)
+                  (aif (iterate-brokers-for-response visitor request initial-brokers (list broker) (1+ recursion-depth))
+                       (return (values it))))))
          (request
           (server.debug "Broker ~A returned the new request ~S, calling ITERATE-BROKERS-FOR-RESPONSE recursively" broker result)
           ;; we've got a new request, start over using the original set of brokers
@@ -116,6 +118,11 @@
                            (lambda ()
                              (produce-response broker request))))
 
+(def generic session-count (broker)
+  (:documentation "Returns, how many sessions this broker currently maintains; default method returns 0")
+  (:method (b)
+    0))
+
 ;; the default handler of brokers start a new generic protocol to introduce a customizable point of filtering
 (def function broker/default-handler (&key broker request &allow-other-keys)
   (handle-request broker request))
@@ -144,7 +151,7 @@
 (def method call-if-matches-request ((broker broker-at-path) request thunk)
   (bind ((broker-path (path-of broker))
          (broker-path-length (length broker-path))
-         (length-matches? (if (zerop broker-path-length)
+         (length-matches? (if (and broker-path (zerop broker-path-length))
                               (length= 0 *remaining-query-path-elements*)
                               (<= broker-path-length
                                   (length *remaining-query-path-elements*)))))

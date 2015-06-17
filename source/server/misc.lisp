@@ -55,9 +55,7 @@
     (format stream "Number of failed requests:                  ~A~%" (failed-request-count-of *server*))
     (format stream "Number of client connection resets:         ~A~%" (client-connection-reset-count-of *server*))
     (format stream "Number of live web sessions:                ~A~%" (iter (for broker :in (brokers-of *server*))
-                                                                            ;; FIXME forward references for application stuff
-                                                                            (when (typep broker 'application)
-                                                                              (summing (hash-table-count (session-id->session-of broker))))))
+                                                                            (summing (session-count broker))))
     (terpri)
     (awhen (and (boundp '*application*)
                 (symbol-value '*application*))

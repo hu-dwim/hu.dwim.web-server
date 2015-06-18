@@ -70,10 +70,10 @@
                                            (:file "js-serving" :depends-on ("js-util" "file-serving"))
                                            (:file "js-i18n" :depends-on ("js-serving"))
                                            (:file "js-util" :depends-on ("variables"))
-                                           (:file "misc" :depends-on ("request-response" "variables"))
+                                           (:file "misc" :depends-on ("request-response" "variables" "brokers"))
                                            (:file "request-response" :depends-on ("api" "variables"))
                                            (:file "websocket" :depends-on ("variables" "brokers" "request-response"))
-                                           (:file "server" :depends-on ("variables" "error-handling"))
+                                           (:file "server" :depends-on ("variables" "error-handling" "request-response"))
                                            (:file "variables" :depends-on ("api"))))))))
 
 (defmethod perform :after ((op hu.dwim.asdf:develop-op) (system (eql (find-system :hu.dwim.web-server))))

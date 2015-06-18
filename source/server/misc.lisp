@@ -97,6 +97,9 @@
               "supported"
               "unsupported")))
 
+(def generic http-user-agent-of (thing)
+  (:documentation "Returns the http-user-agent slot of different classes, and is needed for forward references."))
+
 (def function identify-http-user-agent (request)
   (bind ((header-value (header-value request +header/user-agent+)))
     ;; the locks inside the namespace accessors are enough here

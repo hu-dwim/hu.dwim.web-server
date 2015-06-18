@@ -6,94 +6,16 @@
 
 (in-package :hu.dwim.web-server)
 
-(def (class* e) broker-based-server (server)
-  ((brokers :export :accessor :type sequence)))
-
-(def print-object broker-based-server
-  (print-object/server -self-)
-  (write-string "; brokers: ")
-  (princ (length (brokers-of -self-))))
-
-(def method handle-request ((server broker-based-server) (request request))
-  (debug-only (assert (and (boundp '*broker-stack*) (eq (first *broker-stack*) server))))
-  (bind ((result (multiple-value-list (or (query-brokers-for-response request (brokers-of server) :otherwise #f)
-                                          (make-not-found-response))))
-         (response (first result)))
-    (assert (typep response 'response))
-    (unwind-protect
-         (send-response response)
-      (close-response response))
-    (values-list result)))
-
-(def method startup-server/with-lock-held ((server broker-based-server) &key &allow-other-keys)
-  (setf (brokers-of server) (stable-sort (brokers-of server) 'compare-brokers-for-sorting))
-  ;; notify the brokers about the startup
-  (dolist (broker (brokers-of server))
-    (startup-broker broker))
-  (call-next-method))
-
-(def method shutdown-server ((server broker-based-server) &key &allow-other-keys)
-  (dolist (broker (brokers-of server))
-    (shutdown-broker broker))
-  (call-next-method))
-
-(def (function o) query-brokers-for-response (initial-request initial-brokers &key (otherwise :error otherwise?))
-  (server.debug "QUERY-BROKERS-FOR-RESPONSE starts with brokers ~A" initial-brokers)
-  (bind ((answering-broker nil)
-         (results (multiple-value-list
-                   (iterate-brokers-for-response (lambda (broker request)
-                                                   (setf answering-broker broker)
-                                                   (etypecase broker
-                                                     (broker (bind ((*broker-stack* (cons broker *broker-stack*)))
-                                                               (funcall (handler-of broker)
-                                                                        :broker broker
-                                                                        :request request)))
-                                                     (function-designator (funcall broker
-                                                                                   :broker broker
-                                                                                   :request request))))
-                                                 initial-request
-                                                 initial-brokers
-                                                 initial-brokers
-                                                 0))))
-    (if (first results)
-        (progn
-          (processed-request-counter/increment answering-broker)
-          (values-list results))
-        (handle-otherwise (error "~S: Could not find a broker starting from initial-request ~A and initial-brokers ~A" 'query-brokers-for-response initial-request initial-brokers)))))
-
-(def (function o) iterate-brokers-for-response (visitor request initial-brokers brokers recursion-depth)
-  (declare (type fixnum recursion-depth))
-  (cond
-    ((null brokers)
-     nil)
-    ((> recursion-depth 32)
-     (broker-recursion-limit-reached request brokers)
-     nil)
-    (t
-     (bind ((broker (first brokers))
-            (result-values (multiple-value-list (funcall visitor broker request)))
-            (result (first result-values)))
-       (typecase result
-         (response
-          (server.debug "Broker ~A returned response ~A, returning from ITERATE-BROKERS-FOR-RESPONSE" broker result)
-          (values-list result-values))
-         (cons
-          ;; record the broker who provided the new set of brokers on the *broker-stack*
-          (bind ((*broker-stack* (cons broker *broker-stack*)))
-            (server.debug "Broker ~A returned the new rules ~S, calling ITERATE-BROKERS-FOR-RESPONSE recursively" broker result)
-            (iter (for broker :in result)
-                  (aif (iterate-brokers-for-response visitor request initial-brokers (list broker) (1+ recursion-depth))
-                       (return (values it))))))
-         (request
-          (server.debug "Broker ~A returned the new request ~S, calling ITERATE-BROKERS-FOR-RESPONSE recursively" broker result)
-          ;; we've got a new request, start over using the original set of brokers
-          (iterate-brokers-for-response visitor result initial-brokers initial-brokers (1+ recursion-depth)))
-         (t
-          (iterate-brokers-for-response visitor request initial-brokers (rest brokers) recursion-depth)))))))
-
-
 ;;;;;;
 ;;; broker
+
+(def class* broker (request-counter-mixin)
+  ((priority 0 :type number)
+   (handler 'broker/default-handler :type function-designator)))
+
+(def constructor broker
+  (unless (priority-of -self-)
+    (setf (priority-of -self-) 0)))
 
 (def definer broker (name supers slots &rest options)
   (bind ()
@@ -104,14 +26,6 @@
       `(def class* ,name ,(or supers '(broker))
          ,slots
          ,@options))))
-
-(def class* broker (request-counter-mixin)
-  ((priority 0 :type number)
-   (handler 'broker/default-handler :type function-designator)))
-
-(def constructor broker
-  (unless (priority-of -self-)
-    (setf (priority-of -self-) 0)))
 
 (def method handle-request ((broker broker) (request request))
   (call-if-matches-request broker request
@@ -250,3 +164,91 @@ will echo the request when the host of the http request url ends with \"localhos
                  :filter (named-lambda virtual-host-filter (request)
                            (ends-with-subseq host-name (hu.dwim.uri:host-of (uri-of request))))
                  :children child-brokers))
+
+;;;;;;
+;;; broker-based-server
+
+(def (class* e) broker-based-server (server)
+  ((brokers :export :accessor :type sequence)))
+
+(def print-object broker-based-server
+  (print-object/server -self-)
+  (write-string "; brokers: ")
+  (princ (length (brokers-of -self-))))
+
+(def method handle-request ((server broker-based-server) (request request))
+  (debug-only (assert (and (boundp '*broker-stack*) (eq (first *broker-stack*) server))))
+  (bind ((result (multiple-value-list (or (query-brokers-for-response request (brokers-of server) :otherwise #f)
+                                          (make-not-found-response))))
+         (response (first result)))
+    (assert (typep response 'response))
+    (unwind-protect
+         (send-response response)
+      (close-response response))
+    (values-list result)))
+
+(def method startup-server/with-lock-held ((server broker-based-server) &key &allow-other-keys)
+  (setf (brokers-of server) (stable-sort (brokers-of server) 'compare-brokers-for-sorting))
+  ;; notify the brokers about the startup
+  (dolist (broker (brokers-of server))
+    (startup-broker broker))
+  (call-next-method))
+
+(def method shutdown-server ((server broker-based-server) &key &allow-other-keys)
+  (dolist (broker (brokers-of server))
+    (shutdown-broker broker))
+  (call-next-method))
+
+(def (function o) query-brokers-for-response (initial-request initial-brokers &key (otherwise :error otherwise?))
+  (server.debug "QUERY-BROKERS-FOR-RESPONSE starts with brokers ~A" initial-brokers)
+  (bind ((answering-broker nil)
+         (results (multiple-value-list
+                   (iterate-brokers-for-response (lambda (broker request)
+                                                   (setf answering-broker broker)
+                                                   (etypecase broker
+                                                     (broker (bind ((*broker-stack* (cons broker *broker-stack*)))
+                                                               (funcall (handler-of broker)
+                                                                        :broker broker
+                                                                        :request request)))
+                                                     (function-designator (funcall broker
+                                                                                   :broker broker
+                                                                                   :request request))))
+                                                 initial-request
+                                                 initial-brokers
+                                                 initial-brokers
+                                                 0))))
+    (if (first results)
+        (progn
+          (processed-request-counter/increment answering-broker)
+          (values-list results))
+        (handle-otherwise (error "~S: Could not find a broker starting from initial-request ~A and initial-brokers ~A" 'query-brokers-for-response initial-request initial-brokers)))))
+
+(def (function o) iterate-brokers-for-response (visitor request initial-brokers brokers recursion-depth)
+  (declare (type fixnum recursion-depth))
+  (cond
+    ((null brokers)
+     nil)
+    ((> recursion-depth 32)
+     (broker-recursion-limit-reached request brokers)
+     nil)
+    (t
+     (bind ((broker (first brokers))
+            (result-values (multiple-value-list (funcall visitor broker request)))
+            (result (first result-values)))
+       (typecase result
+         (response
+          (server.debug "Broker ~A returned response ~A, returning from ITERATE-BROKERS-FOR-RESPONSE" broker result)
+          (values-list result-values))
+         (cons
+          ;; record the broker who provided the new set of brokers on the *broker-stack*
+          (bind ((*broker-stack* (cons broker *broker-stack*)))
+            (server.debug "Broker ~A returned the new rules ~S, calling ITERATE-BROKERS-FOR-RESPONSE recursively" broker result)
+            (iter (for broker :in result)
+                  (aif (iterate-brokers-for-response visitor request initial-brokers (list broker) (1+ recursion-depth))
+                       (return (values it))))))
+         (request
+          (server.debug "Broker ~A returned the new request ~S, calling ITERATE-BROKERS-FOR-RESPONSE recursively" broker result)
+          ;; we've got a new request, start over using the original set of brokers
+          (iterate-brokers-for-response visitor result initial-brokers initial-brokers (1+ recursion-depth)))
+         (t
+          (iterate-brokers-for-response visitor request initial-brokers (rest brokers) recursion-depth)))))))

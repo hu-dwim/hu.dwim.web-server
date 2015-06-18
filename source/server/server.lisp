@@ -546,7 +546,6 @@
                                  (accepts-encoding? +content-encoding/deflate+)
                                  (member (kind-of (aif (and (boundp '*session*)
                                                             (symbol-value '*session*))
-                                                       ;; FIXME forward reference
                                                        (http-user-agent-of it)
                                                        (identify-http-user-agent *request*)))
                                          '(:chrome :mozilla :opera)))

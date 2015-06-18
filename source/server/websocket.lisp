@@ -36,7 +36,8 @@
   "Allows CLIENT to be passed more keywords on MAKE-INSTANCE.")
 
 (def (class* e) websocket-broker (broker-at-path)
-  ((clients nil)
+  ((application)
+   (clients nil)
    (client-class 'websocket-client)
    (lock (make-lock))))
 
@@ -481,7 +482,8 @@ payloads."
   (bind ((stream (client-stream-of *request*))
          (broker (broker-of response)))
     (force-output stream)
-    (let ((new-client (make-instance 'websocket-client
+    (server.debug "send-response is creating a new client of type ~A " (client-class-of broker))
+    (let ((new-client (make-instance (client-class-of broker)
                              :input-stream stream
                              :output-stream stream)))
       (call-with-new-client-for-broker new-client
@@ -489,7 +491,7 @@ payloads."
                                          #'(lambda ()
                                              (catch 'websocket-done
                                                (handler-bind ((error #'(lambda (e)
-                                                                         (maybe-invoke-debugger e)
+                                                                         (maybe-invoke-debugger e :context (application-of broker))
                                                                          (server.error "Error: ~a" e)
                                                                          (throw 'websocket-done nil))))
                                                  (read-handle-loop broker new-client))))))))
@@ -498,12 +500,12 @@ payloads."
   (and (search "upgrade" (header-value request +header/connection+) :test #'string-equal)
        (search "websocket" (header-value request +header/upgrade+) :test #'string-equal)))
 
-(def (definer e) websocket-entry-point ((application path message &optional (message-type nil) (client nil) (other-clients nil) &key (priority 0)) &body body)
+(def (definer e) websocket-entry-point ((application path message &optional (message-type nil) (client nil) (other-clients nil) &key (client-class 'websocket-client) (priority 0)) &body body)
   "Creates a websocket-broker and a websocket-message-received method which specialises on that
   broker. The &body code is called when a websocket client connects to the given path and sends a text or binary
   message."
   (with-unique-names (entry-point)
-    `(bind ((,entry-point (make-instance 'websocket-broker :path ,path :priority ,priority )))
+    `(bind ((,entry-point (make-instance 'websocket-broker :path ,path :priority ,priority :client-class ,client-class :application ,application)))
        ,(unless body
                 (error "You must define a websocket-entry-point with a body which does something with type and message."))
        (defmethod websocket-message-received ((broker (eql ,entry-point))
@@ -514,4 +516,3 @@ payloads."
              ,@body))
        (ensure-entry-point ,application ,entry-point)
        ,entry-point)))
-

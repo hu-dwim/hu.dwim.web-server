@@ -6,17 +6,21 @@
 
 (in-package :hu.dwim.web-server)
 
+;; TODO FIXME cleanup:
+;; - follow def class* and condition* naming convention (or replace convention)
+;; - check names to be specific enough or set up a separate package
+
 (define-constant +websocket-magic-key+
   "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
   :test #'string=
   :documentation "Fixed magic WebSocket UUIDv4 key use in handshakes")
 
-(define-constant +continuation-frame+    #x0)
-(define-constant +text-frame+            #x1)
-(define-constant +binary-frame+          #x2)
-(define-constant +connection-close+      #x8)
-(define-constant +ping+                  #x9)
-(define-constant +pong+                  #xA)
+(define-constant +websocket-opcode/continuation-frame+    #x0)
+(define-constant +websocket-opcode/text-frame+            #x1)
+(define-constant +websocket-opcode/binary-frame+          #x2)
+(define-constant +websocket-opcode/connection-close+      #x8)
+(define-constant +websocket-opcode/ping+                  #x9)
+(define-constant +websocket-opcode/pong+                  #xA)
 
 (defun control-frame-p (opcode)
   (plusp (logand #x8 opcode)))
@@ -72,20 +76,20 @@ message-type is :text or :binary"))
            (websocket-error 1009 "Total message too big"))))
   (:method ((broker websocket-broker)
             (client websocket-client)
-            (opcode (eql +binary-frame+)) length total)
+            (opcode (eql +websocket-opcode/binary-frame+)) length total)
     (websocket-error 1003 "Binaries not accepted")))
 
 ;; Convenience API
 ;;
 (def (function e) send-text-message (client message)
   "MESSAGE is a string"
-  (send-frame client +text-frame+
+  (send-frame client +websocket-opcode/text-frame+
               (flexi-streams:string-to-octets message
                                               :external-format :utf-8)))
 
 (defun close-connection (client &key data status reason)
   (send-frame client
-              +connection-close+
+              +websocket-opcode/connection-close+
               (or data
                   (concatenate 'vector
                                (coerce (list (logand (ash status -8) #xff)
@@ -123,8 +127,7 @@ message-type is :text or :binary"))
   (:documentation "Superclass for all errors related to Websocket."))
 
 (defun websocket-error (status format-control &rest format-arguments)
-  "Signals an error of type HUNCHENTOOT-SIMPLE-ERROR with the provided
-format control and arguments."
+  "Signals an error of the same name."
   (error 'websocket-error
          :status status
          :format-control format-control
@@ -141,14 +144,14 @@ format control and arguments."
   (with-slots (clients lock) broker
     (unwind-protect
          (progn
-           (bt:with-lock-held (lock)
+           (bordeaux-threads:with-lock-held (lock)
              (push client clients))
            (setf (slot-value client 'state) :connected)
            (client-connected broker client)
            (funcall fn))
-      (bt:with-lock-held (lock)
+      (bordeaux-threads:with-lock-held (lock)
         (with-slots (write-lock) client
-          (bt:with-lock-held (write-lock)
+          (bordeaux-threads:with-lock-held (write-lock)
             (setq clients (remove client clients))
             (setq write-lock nil))))
       (client-disconnected broker client))))
@@ -157,7 +160,8 @@ format control and arguments."
                                                   output-stream
                                                   broker)
                                       &body body)
-  (alexandria:once-only (broker)
+  (once-only (broker)
+    ;; FIXME apply requires a list at the last position
     `(let ((,client-sym (apply #'make-instance
                                (slot-value ,broker 'client-class)
                                'input-stream ,input-stream
@@ -183,7 +187,7 @@ format control and arguments."
 
 (defun read-n-bytes-into-sequence (stream n)
   "Return an array of N bytes read from stream"
-  (let* ((array (make-array n :element-type '(unsigned-byte 8)))
+  (bind ((array (make-array n :element-type '(unsigned-byte 8)))
          (read (read-sequence array stream)))
     (assert (= read n) nil
             "Expected to read ~a bytes, but read ~a" n read)
@@ -196,7 +200,7 @@ format control and arguments."
    (payload-length  :initarg :payload-length :accessor frame-payload-length)
    (masking-key     :initarg :masking-key)))
 
-(defun read-frame (stream &key read-payload-p)
+(defun read-websocket-frame (stream &key read-payload-p)
   (let* ((first-byte       (read-byte stream))
          (fin              (ldb (byte 1 7) first-byte))
          (extensions       (ldb (byte 3 4) first-byte))
@@ -231,10 +235,9 @@ format control and arguments."
         (read-application-data stream frame))
       frame)))
 
-(defun read-frame-from-client (client)
+(defun read-websocket-frame-from-client (client)
   "Read a text or binary message from CLIENT."
-  (with-slots (input-stream) client
-    (read-frame input-stream)))
+  (read-websocket-frame (input-stream-of client)))
 
 (defun mask-unmask (data masking-key)
   ;; RFC6455 Masking
@@ -259,6 +262,7 @@ format control and arguments."
       (mask-unmask data masking-key))))
 
 (defun write-frame (stream opcode &optional data)
+  ;; TODO use nibbles for this?
   (let* ((first-byte     #x00)
          (second-byte    #x00)
          (len            (if data (length data) 0))
@@ -281,13 +285,14 @@ format control and arguments."
           do (write-byte (logand out #xff) stream))
     ;; (if mask-p
     ;;     (error "sending masked messages not implemented yet"))
-    (if data (write-sequence data stream))
+    (when data
+      (write-sequence data stream))
     (force-output stream)))
 
 
 ;;; State machine and main websocket loop
 ;;;
-(defun handle-frame (broker client frame)
+(defun handle-websocket-frame (broker client frame)
   (with-slots (state pending-fragments pending-opcode input-stream) client
     (with-slots (opcode finp payload-length masking-key) frame
       (flet ((maybe-accept-data-frame ()
@@ -304,7 +309,7 @@ format control and arguments."
            ;; We're waiting a close because we explicitly sent one to the
            ;; client. Error out if the next message is not a close.
            ;;
-           (unless (eq opcode +connection-close+)
+           (unless (eq opcode +websocket-opcode/connection-close+)
              (websocket-error
               1002 "Expected connection close from client, got 0x~x" opcode))
            (setq state :closed))
@@ -312,7 +317,7 @@ format control and arguments."
            ;; This is a non-FIN fragment Check opcode, append to client's
            ;; fragments.
            ;;
-           (cond ((and (= opcode +continuation-frame+)
+           (cond ((and (= opcode +websocket-opcode/continuation-frame+)
                        (not pending-fragments))
                   (websocket-error
                    1002 "Unexpected continuation frame"))
@@ -320,7 +325,7 @@ format control and arguments."
                   (websocket-error
                    1002 "Control frames can't be fragmented"))
                  ((and pending-fragments
-                       (/= opcode +continuation-frame+))
+                       (/= opcode +websocket-opcode/continuation-frame+))
                   (websocket-error
                    1002 "Not discarding initiated fragment sequence"))
                  (t
@@ -328,14 +333,14 @@ format control and arguments."
                   ;; or continuing one
                   ;;
                   (maybe-accept-data-frame)
-                  (cond ((= opcode +continuation-frame+)
+                  (cond ((= opcode +websocket-opcode/continuation-frame+)
                          (push frame pending-fragments))
                         (t
                          (setq pending-opcode opcode
                                pending-fragments (list frame)))))))
           ((and pending-fragments
                 (not (or (control-frame-p opcode)
-                         (= opcode +continuation-frame+))))
+                         (= opcode +websocket-opcode/continuation-frame+))))
            ;; This is a FIN fragment and (1) there are pending fragments and (2)
            ;; this isn't a control or continuation frame. Error out.
            ;;
@@ -356,7 +361,7 @@ format control and arguments."
                 (setq pending-opcode opcode))
               (let ((ordered-frames
                       (reverse (cons frame pending-fragments))))
-                (cond ((eq +text-frame+ pending-opcode)
+                (cond ((eq +websocket-opcode/text-frame+ pending-opcode)
                        ;; A text message was received
                        ;;
                        (websocket-message-received
@@ -366,7 +371,7 @@ format control and arguments."
                                 (mapcar #'frame-data
                                         ordered-frames))
                          :external-format :utf-8)))
-                      ((eq +binary-frame+ pending-opcode)
+                      ((eq +websocket-opcode/binary-frame+ pending-opcode)
                        ;; A binary message was received
                        ;;
                        (let ((temp-file
@@ -383,28 +388,25 @@ format control and arguments."
                        (websocket-error
                         1002 "Client sent unknown opcode ~a" opcode))))
               (setf pending-fragments nil))
-             ((eq +ping+ opcode)
+             ((eq +websocket-opcode/ping+ opcode)
               ;; Reply to client-initiated ping with a server-pong with the
               ;; same data
-              (send-frame client +pong+ (frame-data frame)))
-             ((eq +connection-close+ opcode)
+              (send-frame client +websocket-opcode/pong+ (frame-data frame)))
+             ((eq +websocket-opcode/connection-close+ opcode)
               ;; Reply to client-initiated close with a server-close with the
               ;; same data
               ;;
               (close-connection client :data (frame-data frame))
               (setq state :closed))
-             ((eq +pong+ opcode)
+             ((eq +websocket-opcode/pong+ opcode)
               ;; Probably just a heartbeat, don't do anything.
               )
              (t
               (websocket-error
                1002 "Client sent unknown opcode ~a" opcode)))))))))
 
-(defun read-handle-loop (broker client
-                         &optional (version :rfc-6455))
-  "Implements the main WebSocket loop for supported protocol
-versions. Framing is handled automatically, CLIENT handles the actual
-payloads."
+(defun websocket/read-handle-loop (broker client &optional (version :rfc-6455))
+  "Implements the main WebSocket loop for supported protocol versions. Framing is handled automatically, CLIENT handles the actual payloads."
   (ecase version
     (:rfc-6455
      (handler-bind ((websocket-error
@@ -426,9 +428,9 @@ payloads."
                           (close-connection client :status 1011
                                                    :reason "Internal error"))))
        (with-slots (state) client
-         (loop do (handle-frame broker
-                                client
-                                (read-frame-from-client client))
+         (loop do (handle-websocket-frame broker
+                                          client
+                                          (read-websocket-frame-from-client client))
                while (not (eq :closed state))))))))
 
 
@@ -494,16 +496,14 @@ payloads."
                                                                          (maybe-invoke-debugger e :context (application-of broker))
                                                                          (server.error "Error: ~a" e)
                                                                          (throw 'websocket-done nil))))
-                                                 (read-handle-loop broker new-client))))))))
+                                                 (websocket/read-handle-loop broker new-client))))))))
 
 (defun websocket-request? (request)
   (and (search "upgrade" (header-value request +header/connection+) :test #'string-equal)
        (search "websocket" (header-value request +header/upgrade+) :test #'string-equal)))
 
 (def (definer e) websocket-entry-point ((application path message &optional (message-type nil) (client nil) (other-clients nil) &key (client-class 'websocket-client) (priority 0)) &body body)
-  "Creates a websocket-broker and a websocket-message-received method which specialises on that
-  broker. The &body code is called when a websocket client connects to the given path and sends a text or binary
-  message."
+  "Creates a websocket-broker and a websocket-message-received method which specialises on that broker. The &body code is called when a websocket client connects to the given path and sends a text or binary message."
   (with-unique-names (entry-point)
     `(bind ((,entry-point (make-instance 'websocket-broker :path ,path :priority ,priority :client-class ,client-class :application ,application)))
        ,(unless body

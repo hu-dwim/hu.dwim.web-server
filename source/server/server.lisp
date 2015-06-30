@@ -132,9 +132,9 @@
                          (fd (iolib:fd-of socket)))
                     (unwind-protect-case ()
                         (progn
-                          (assert fd)
-                          ;;(setf (iolib:socket-option socket :receive-timeout) 1)
                           (server.debug "Adding socket ~A, fd ~A to the accept multiplexer" socket fd)
+                          (assert (integerp fd))
+                          ;;(setf (iolib:socket-option socket :receive-timeout) 1)
                           (iomux::monitor-fd mux (aprog1
                                                      (iomux::make-fd-entry fd)
                                                    ;; KLUDGE to make the multiplexer do what we want

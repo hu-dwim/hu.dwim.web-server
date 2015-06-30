@@ -30,9 +30,9 @@
                :hu.dwim.util.temporary-files
                :hu.dwim.util.zlib
                :iolib
-               :iolib.pathnames
-               :iolib.sockets
-               :iolib.os
+               :iolib/pathnames
+               :iolib/sockets
+               :iolib/os
                :ironclad
                :local-time
                :parse-number

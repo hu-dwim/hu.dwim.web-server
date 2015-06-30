@@ -79,7 +79,8 @@
 (def function total-web-session-count (server)
   (bind ((sum 0))
     (map-broker-tree server (lambda (el)
-                              (incf sum (session-count el))))
+                              (when (typep el 'application)
+                                (incf sum (hash-table-count (session-id->session-of el))))))
     sum))
 
 (def function map-broker-tree (root visitor &key

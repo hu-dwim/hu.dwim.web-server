@@ -32,11 +32,6 @@
                            (lambda ()
                              (produce-response broker request))))
 
-(def generic session-count (broker)
-  (:documentation "Returns, how many sessions this broker currently maintains; default method returns 0")
-  (:method (b)
-    0))
-
 ;; the default handler of brokers start a new generic protocol to introduce a customizable point of filtering
 (def function broker/default-handler (&key broker request &allow-other-keys)
   (handle-request broker request))

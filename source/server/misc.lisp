@@ -54,8 +54,10 @@
     (format stream "Number of gracefully aborted requests:      ~A~%" (gracefully-aborted-request-count-of *server*))
     (format stream "Number of failed requests:                  ~A~%" (failed-request-count-of *server*))
     (format stream "Number of client connection resets:         ~A~%" (client-connection-reset-count-of *server*))
+    #+nil ;; FIXME this leads to a compile time warning due to forward references to application stuff
     (format stream "Number of live web sessions:                ~A~%" (iter (for broker :in (brokers-of *server*))
-                                                                            (summing (session-count broker))))
+                                                                            (when (typep broker 'application)
+                                                                              (summing (hash-table-count (session-id->session-of broker))))))
     (terpri)
     (awhen (and (boundp '*application*)
                 (symbol-value '*application*))

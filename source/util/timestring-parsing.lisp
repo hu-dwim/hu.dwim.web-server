@@ -51,5 +51,7 @@
       ;; Sun, 06 Nov 1994 08:49:37 GMT    ; RFC 822, updated by RFC 1123
       ;; Sunday, 06-Nov-94 08:49:37 GMT   ; RFC 850, obsoleted by RFC 1036
       ;; Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
+      ;; seen these in the wild:
+      ;; Failed to parse If-Modified-Since header value "Sun, 21 Jun 2015 01:31:02 UTC"
       (handle-otherwise
         (error "Unable to parse ~S as a http timestring" string))))

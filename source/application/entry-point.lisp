@@ -97,6 +97,7 @@
        (setf class 'broker-at-path)
        (push :path initargs)))
     `(bind ((,entry-point (make-instance ',class ,@initargs)))
+       ;; this 'when body' may seem fishy, but there are places/setups that dispatch on the class of the entry point before the body would be executed
        ,(when body
           `(setf (handler-of ,entry-point)
                  (named-lambda entry-point-definer/handler (&key ((:broker ,entry-point)) ((:request ,request)) &allow-other-keys)

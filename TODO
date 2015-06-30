@@ -13,15 +13,6 @@ not yet clicked on).This leads to an increase in DOM size and slower
 rendering.
 
 We should use ajax on the client side to download context menu on demand.
-
-* DONE [#A] session timeout leads to 'unknown error at toplevel' in browser     :Attila:major:BUG:
-  CLOSED: [2010-02-05 Fri 23:54]
-
-Desired behaviour:
-
-explicit error answer for ajax requests coming to non-existent
-(probably timed out) sessions. tell the js side that the session does
-not exist anymore
 * TODO [#C] detect disabled cookies                                             :Unassigned:minor:TASK:
 
 Description:
@@ -44,9 +35,19 @@ Issues:
  - the slot name 'ajax' is used for storing a dom-id, which is not suggested by its name
 * TODO [#C] try to conflate applications/entry-points/servers into a uniform tree of brokers  :Unassigned:minor:TASK:
 * TODO on firefox the _m modifier key parameter accumulates when selecting tabs in a project page in hu.dwim.home :Unassigned:BUG:
-* DONE session cookies end up on path='/' when first visit comes through an entry point path, even though cookie path is set properly :Unassigned:BUG:
+* TODO who needs to call ENSURE-HTTP-REQUEST-BODY-IS-PARSED? export it?
+
+* DONE [#A] session timeout leads to 'unknown error at toplevel' in browser     :Attila:major:BUG:ARCHIVE:
+  CLOSED: [2010-02-05 Fri 23:54]
+
+Desired behaviour:
+
+explicit error answer for ajax requests coming to non-existent
+(probably timed out) sessions. tell the js side that the session does
+not exist anymore
+* DONE session cookies end up on path='/' when first visit comes through an entry point path, even though cookie path is set properly :Unassigned:BUG:ARCHIVE:
   When visiting the site without a session cookie on the /project/foo entry point, then chrome (only?) registers the cookie on the
 path '/project', even though the Set-Cookie header we send to it contains a cookie with path '/'
-* DONE [#A] cookies are not stored when accessed through ip addresses or localhost :Unassigned:minor:BUG
+* DONE [#A] cookies are not stored when accessed through ip addresses or localhost :Unassigned:minor:BUG :ARCHIVE:
   - Note taken on [2010-08-28 Sat 22:22] \\
     that's a browser design decision: http://code.google.com/p/chromium/issues/detail?id=56211

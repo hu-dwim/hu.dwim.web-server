@@ -13,7 +13,6 @@
                :babel-streams
                :bordeaux-threads
                :cffi
-               :cl-base64
                :cl-fad ; TODO replace with iolib
                :cl+ssl
                :hu.dwim.common
@@ -33,7 +32,6 @@
                :iolib/pathnames
                :iolib/sockets
                :iolib/os
-               :ironclad
                :local-time
                :parse-number
                :rfc2109
@@ -72,7 +70,6 @@
                                            (:file "js-util" :depends-on ("variables"))
                                            (:file "misc" :depends-on ("request-response" "variables" "brokers"))
                                            (:file "request-response" :depends-on ("api" "variables"))
-                                           (:file "websocket" :depends-on ("variables" "brokers" "request-response"))
                                            (:file "server" :depends-on ("variables" "error-handling" "request-response"))
                                            (:file "variables" :depends-on ("api"))))))))
 

@@ -51,7 +51,8 @@
              (values)))
     (bind ((status (or (assoc-value headers +header/status+ :test #'string=)
                        +http-ok+))
-           (date-header-seen? #f))
+           (date-header-seen? #f)
+           (connection-header-seen? #f))
       (http.debug "Sending headers (Status: ~S)" status)
       (write-sequence #.(string-to-us-ascii-octets "HTTP/1.1 ") stream)
       (write-sequence (string-to-us-ascii-octets status) stream)
@@ -60,13 +61,15 @@
       (dolist ((name . value) headers)
         (when (string= name +header/date+)
           (setf date-header-seen? #t))
+        (when (string= name +header/connection+)
+          (setf connection-header-seen? #t))
         (when value
           (write-header-line name value)))
       (unless date-header-seen?
         (write-header-line +header/date+ (local-time:to-rfc1123-timestring (local-time:now))))
       ;; TODO: connection keep-alive handling
-      (write-sequence "Connection: Close" stream)
-      (write-crlf stream)
+      (unless connection-header-seen?
+        (write-header-line +header/connection+ "Close"))
       (dolist (cookie cookies)
         (write-header-line "Set-Cookie"
                            (if (rfc2109:cookie-p cookie)

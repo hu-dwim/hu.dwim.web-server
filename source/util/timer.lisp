@@ -16,7 +16,7 @@
 
 (def function drive-timer (timer)
   "This is the entry point of the timer. There should be one and only one thread calling this function for each timer."
-  (timer.debug "Thread is entering the timer loop DRIVE-TIMER of ~A" timer)
+  (timer.debug "DRIVE-TIMER of ~A" timer)
   (unwind-protect
        (progn
          (assert (null (running-thread-of timer)))
@@ -29,7 +29,7 @@
     (setf (running-thread-of timer) nil)
     (with-lock-held-on-timer timer
       (condition-notify (condition-variable-of timer)))
-    (timer.debug "Thread is leaving the timer loop DRIVE-TIMER of ~A" timer)))
+    (timer.debug "Leaving DRIVE-TIMER of ~A" timer)))
 
 (def function drive-timer/process-entries (timer)
   (flet ((reschedule-entries ()
@@ -37,7 +37,7 @@
                  (sort (delete-if (complement #'timer-entry-valid?) (entries-of timer))
                        'local-time:timestamp<
                        :key 'run-at-of))))
-    (timer.debug "Thread is entering the timer loop DRIVE-TIMER of ~A" timer)
+    (timer.debug "DRIVE-TIMER/PROCESS-ENTRIES of ~A" timer)
     (bind ((entries)
            (run-anything? #f))
       (with-lock-held-on-timer timer
@@ -129,16 +129,18 @@
 
 (def generic run-timer-entry (timer entry)
   (:method ((timer timer) (entry timer-entry))
-    (timer.dribble "Running timer entry ~A" entry)
-    (awhen (thunk-of entry)
-      (block running-timer-entry
-        (with-layered-error-handlers ((lambda (error)
-                                        (handle-toplevel-error timer error))
+    (timer.dribble "RUN-TIMER-ENTRY of ~A" entry)
+    (bind ((start-time (get-monotonic-time)))
+      (awhen (thunk-of entry)
+        (block running-timer-entry
+          (with-layered-error-handlers ((lambda (error)
+                                          (handle-toplevel-error timer error))
                                       (lambda (&key &allow-other-keys)
                                         (return-from running-timer-entry)))
           (with-simple-restart (skip-timer-entry "Skip calling timer entry ~A" entry)
             (with-thread-name " / running timer entry"
-              (funcall it)))))))
+              (funcall it))))))
+      (timer.dribble "Leaving RUN-TIMER-ENTRY of ~A, took ~,4F secs" entry (- (get-monotonic-time) start-time))))
 
   (:method :after ((timer timer) (entry single-shot-timer-entry))
     (timer.debug "Invalidating single shot timer entry ~A" entry)

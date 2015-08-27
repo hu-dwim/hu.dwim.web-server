@@ -147,7 +147,7 @@
                       (:abort (close socket)))
                     (return-from binding))))))
           (setf (connection-multiplexer-of server) mux)
-          ;; fire up the worker-loop, either in this thread or in several worker threads
+          ;; fire up the worker/entry-point either in this thread or in several worker threads
           (if (zerop (maximum-worker-count-of server))
               (unwind-protect
                    (progn
@@ -242,7 +242,7 @@
   ;; NOTE: redefining this function in a running server will only effect newly spawned workers
   (assert (or (not threaded?) worker))
   (with-lock-held-on-server (server)
-    ;; wait until the startup procedure finished
+    ;; this waits until the startup procedure is finished
     )
   (flet ((process-requests ()
            (iter
@@ -348,14 +348,17 @@
                                          (headers-are-sent-p *response*))
                                 (cerror "Continue even though some data was sent already" "Some data was already written to the network stream, so restarting the request handling will probably not result in what you would expect."))
                               (setf *response* nil)
+                              (server.dribble "Worker is calling (HANDLER-OF SERVER)")
                               (funcall (handler-of server))
+                              (server.dribble "Worker returned from (HANDLER-OF SERVER)")
                               (return)))))
                       (server.dribble "Worker is closing the request")
                       (close-request *request*)
                       (server.dribble "Worker finished closing the request")))
                (server.dribble "Will decf OCCUPIED-WORKER-COUNT")
                (with-lock-held-on-server (server)
-                 (decf (occupied-worker-count-of server)))))
+                 (decf (occupied-worker-count-of server))))
+             (server.dribble "SERVE-IT is returning"))
            (ignore-condition-predicate (error)
              ;; passing down client-stream/ssl is not an option here, because an error can come earlier from cl+ssl:make-ssl-server-stream
              (is-error-from-client-stream? error client-stream/iolib))

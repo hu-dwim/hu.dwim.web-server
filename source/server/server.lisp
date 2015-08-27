@@ -153,7 +153,7 @@
                    (progn
                      ;; this is the single-threaded mode using the caller thread (for debugging and profiling)
                      (server.info "Starting server in the current thread, use C-c C-c and restarts to break out...")
-                     (worker-loop server #f))
+                     (worker/entry-point server #f))
                 ;; when a restart was selected, then shut the server down...
                 (shutdown-server server))
               (progn
@@ -224,7 +224,7 @@
     (let ((worker (make-instance 'worker)))
       (setf (thread-of worker)
             (make-thread (lambda ()
-                           (worker-loop server #t worker))
+                           (worker/entry-point server #t worker))
                          :name (format nil "http worker ~a" (atomic-counter/increment (worker-id-of server)))))
       (register-worker worker server)
       (server.info "Spawned new worker thread ~A" worker)
@@ -238,55 +238,60 @@
   (with-lock-held-on-server (server)
     (deletef (workers-of server) worker)))
 
-(def function worker-loop (server &optional (threaded? #f) worker)
+(def function worker/entry-point (server &optional (threaded? #f) worker)
+  ;; NOTE: redefining this function in a running server will only effect newly spawned workers
   (assert (or (not threaded?) worker))
   (with-lock-held-on-server (server)
     ;; wait until the startup procedure finished
     )
-  (if threaded?
-      (unwind-protect
-           (restart-case
-               (worker-loop/body server threaded? worker)
-             (remove-worker ()
-               :report (lambda (stream)
-                         (format stream "Stop and remove worker ~A" worker))
-               (values)))
-        (server.dribble "Worker ~A is about to leave. There are ~A workers currently." worker (length (workers-of server)))
-        (with-lock-held-on-server (server)
-          (when worker
-            (unregister-worker worker server))
-          (when (and (not (shutdown-initiated-p server))
-                     (zerop (length (workers-of server))))
-            (make-worker server))))
-      (worker-loop/body server threaded? worker)))
+  (flet ((process-requests ()
+           (iter
+             (until (shutdown-initiated-p server))
+             (worker/process-some-requests server threaded? worker))))
+    (cond
+      ((not threaded?)
+       (process-requests))
+      (threaded?
+       (unwind-protect
+            (restart-case
+                (process-requests)
+              (remove-worker ()
+                :report (lambda (stream)
+                          (format stream "Stop and remove worker ~A" worker))
+                (values)))
+         (server.dribble "Worker ~A is about to leave. There are ~A workers currently." worker (length (workers-of server)))
+         (with-lock-held-on-server (server)
+           (when worker
+             (unregister-worker worker server))
+           (when (and (not (shutdown-initiated-p server))
+                      (zerop (length (workers-of server))))
+             (make-worker server))))))))
 
-(def function worker-loop/body (server &optional (threaded? #f) worker)
+(def function worker/process-some-requests (server &optional (threaded? #f) worker)
   (bind ((mux (connection-multiplexer-of server))
          (listen-entries (listen-entries-of server)))
     (assert mux)
-    (iter
-      (until (shutdown-initiated-p server))
-      ;; (server.dribble "Acceptor multiplexer ticked")
-      (iter (for (fd event-types) :in (with-lock-held-on-server (server)
-                                        ;; NOTE serialization of access is only necessary because of iolib, not because of the underlying ISYS:EPOLL-WAIT call
-                                        (iomux::harvest-events mux 1)))
-            (server.dribble "Acceptor multiplexer returned for fd ~S, events ~S" fd event-types)
-            (until (shutdown-initiated-p server))
-            (when (member :read event-types :test #'eq)
-              (server.debug "Acceptor multiplexer got a :read event for listen fd ~S" fd)
-              (bind ((listen-entry (find fd listen-entries :key [iolib:fd-of (socket-of !1)])))
-                (assert listen-entry () "listen-entry not found for fd ~A?!" fd)
-                (iter (for client-stream/iolib = (iolib:accept-connection (socket-of listen-entry) :wait #f))
-                      (while (and client-stream/iolib
-                                  (not (shutdown-initiated-p server))))
-                      (server.dribble "Acceptor multiplexer accepted the connection ~A, fd ~S, on port ~A" client-stream/iolib (iolib.streams:fd-of client-stream/iolib) (port-of listen-entry))
-                      ;; TODO is this a constant or depends on server network load?
-                      (setf (iolib:socket-option client-stream/iolib :receive-timeout) 15)
-                      ;; iolib streams are based on non-blocking fd's, so we don't need to (iolib.syscalls::%set-fd-nonblock client-stream-fd #t)
-                      (worker-loop/serve-one-request threaded? server worker client-stream/iolib listen-entry)))))))
+    ;; (server.dribble "Acceptor multiplexer ticked")
+    (iter (for (fd event-types) :in (with-lock-held-on-server (server)
+                                      ;; NOTE serialization of access is only necessary because of iolib, not because of the underlying ISYS:EPOLL-WAIT call
+                                      (iomux::harvest-events mux 1)))
+          (server.dribble "Acceptor multiplexer returned for fd ~S, events ~S" fd event-types)
+          (until (shutdown-initiated-p server))
+          (when (member :read event-types :test #'eq)
+            (server.debug "Acceptor multiplexer got a :read event for listen fd ~S" fd)
+            (bind ((listen-entry (find fd listen-entries :key [iolib:fd-of (socket-of !1)])))
+              (assert listen-entry () "listen-entry not found for fd ~A?!" fd)
+              (iter (for client-stream/iolib = (iolib:accept-connection (socket-of listen-entry) :wait #f))
+                    (while (and client-stream/iolib
+                                (not (shutdown-initiated-p server))))
+                    (server.dribble "Acceptor multiplexer accepted the connection ~A, fd ~S, on port ~A" client-stream/iolib (iolib.streams:fd-of client-stream/iolib) (port-of listen-entry))
+                    ;; TODO is this a constant or depends on server network load?
+                    (setf (iolib:socket-option client-stream/iolib :receive-timeout) 15)
+                    ;; iolib streams are based on non-blocking fd's, so we don't need to (iolib.syscalls::%set-fd-nonblock client-stream-fd #t)
+                    (worker/process-one-request threaded? server worker client-stream/iolib listen-entry))))))
   (values))
 
-(def function worker-loop/serve-one-request (threaded? server worker client-stream/iolib listen-entry)
+(def function worker/process-one-request (threaded? server worker client-stream/iolib listen-entry)
   (bind ((client-stream/ssl nil))
     (flet ((serve-it ()
              (server.dribble "Worker ~A is processing a request" worker)
@@ -345,7 +350,10 @@
                               (setf *response* nil)
                               (funcall (handler-of server))
                               (return)))))
-                      (close-request *request*)))
+                      (server.dribble "Worker is closing the request")
+                      (close-request *request*)
+                      (server.dribble "Worker finished closing the request")))
+               (server.dribble "Will decf OCCUPIED-WORKER-COUNT")
                (with-lock-held-on-server (server)
                  (decf (occupied-worker-count-of server)))))
            (ignore-condition-predicate (error)
@@ -396,7 +404,7 @@
                  (block closing
                    (with-layered-error-handlers ((lambda (error &key &allow-other-keys)
                                                    (declare (ignorable error))
-                                                   ;; let's not clutter the error log with non-interesting errors... (server.error (build-error-log-message :error-condition error :message (format nil "Failed to close the socket stream in WORKER-LOOP/SERVE-ONE-REQUEST while ~A the UNWIND-PROTECT block." (if interrupted? "unwinding" "normally exiting"))))
+                                                   ;; let's not clutter the error log with non-interesting errors... (server.error (build-error-log-message :error-condition error :message (format nil "Failed to close the socket stream in WORKER/PROCESS-ONE-REQUEST while ~A the UNWIND-PROTECT block." (if interrupted? "unwinding" "normally exiting"))))
                                                    (server.debug "Error closing the socket ~A while ~A: ~A" client-stream/iolib (if interrupted? "unwinding" "normally exiting") error)
                                                    (return-from closing))
                                                  #'abort-request)

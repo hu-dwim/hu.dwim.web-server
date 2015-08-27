@@ -272,9 +272,7 @@
          (listen-entries (listen-entries-of server)))
     (assert mux)
     ;; (server.dribble "Acceptor multiplexer ticked")
-    (iter (for (fd event-types) :in (with-lock-held-on-server (server)
-                                      ;; NOTE serialization of access is only necessary because of iolib, not because of the underlying ISYS:EPOLL-WAIT call
-                                      (iomux::harvest-events mux 1)))
+    (iter (for (fd event-types) :in (iomux::harvest-events mux 1))
           (server.dribble "Acceptor multiplexer returned for fd ~S, events ~S" fd event-types)
           (until (shutdown-initiated-p server))
           (when (member :read event-types :test #'eq)

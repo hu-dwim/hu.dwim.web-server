@@ -134,6 +134,6 @@
 
 (def (definer e) js-file-serving-entry-point (application path root-directory &key priority)
   `(def (entry-point ,@-options-) (,application js-directory-serving-broker
-                                                :path-prefix ,path
+                                                :path ,path
                                                 :root-directory ,root-directory
                                                 :priority ,priority)))

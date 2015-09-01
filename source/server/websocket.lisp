@@ -443,6 +443,9 @@ message-type is :text or :binary"))
 (def class* websocket-response (primitive-http-response)
   ((broker :type websocket-broker)))
 
+(def print-object websocket-response
+  (format t "[HEADERS: ~S, COOKIES: ~S]" (headers-of -self-) (cookies-of -self-)))
+
 (def method read-request :around ((server server) client-stream/iolib client-stream/ssl)
   (bind ((request (call-next-method)))
     (when (websocket-request? request)

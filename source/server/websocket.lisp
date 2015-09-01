@@ -454,6 +454,13 @@ message-type is :text or :binary"))
   (when (call-next-method broker request (lambda () t))
     (produce-response broker request)))
 
+(def method produce-response ((broker websocket-broker) (request http-request))
+  "This happens when the endpoint is called with a normal HTTP request
+and the result is a 404 which is the same behaviour as other server
+implementations: cf. echo.websocket.org or Jetty's websocket
+implementation."
+  (make-not-found-response))
+
 (def method produce-response ((broker websocket-broker) (request websocket-request))
   (bind ((path (path-of broker))
          (origin (header-value request "Origin"))

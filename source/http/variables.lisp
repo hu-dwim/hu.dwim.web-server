@@ -145,6 +145,7 @@
    +odt-mime-type+        "application/vnd.oasis.opendocument.text"
    +ods-mime-type+        "application/vnd.oasis.opendocument.spreadsheet"
    +javascript-mime-type+ "text/javascript"
+   +json-mime-type+       "application/json"
    +plain-text-mime-type+ "text/plain"
    +octet-stream-mime-type+ "application/octet-stream"
    +atom-feed-mime-type+  "application/atom+xml"

@@ -447,6 +447,8 @@ message-type is :text or :binary"))
   (format t "[HEADERS: ~S, COOKIES: ~S]" (headers-of -self-) (cookies-of -self-)))
 
 (def method read-request :around ((server server) client-stream/iolib client-stream/ssl)
+     "If we find the Connection: Upgrade header and Upgrade:
+Websocket, change the request class to websocket-request."
   (bind ((request (call-next-method)))
     (when (websocket-request? request)
       (change-class request 'websocket-request))
@@ -512,17 +514,17 @@ implementation."
   (and (search "upgrade" (header-value request +header/connection+) :test #'string-equal)
        (search "websocket" (header-value request +header/upgrade+) :test #'string-equal)))
 
-(def (definer e) websocket-entry-point ((application path message &optional (message-type nil) (client nil) (other-clients nil) &key (client-class 'websocket-client) (priority 0)) &body body)
+(def (definer e) websocket-entry-point ((application path message &optional (message-type nil) (client nil) (other-clients nil) &key (client-class 'hu.dwim.web-server:websocket-client) (priority 0)) &body body)
   "Creates a websocket-broker and a websocket-message-received method which specialises on that broker. The &body code is called when a websocket client connects to the given path and sends a text or binary message."
   (with-unique-names (entry-point)
-    `(bind ((,entry-point (make-instance 'websocket-broker :path ,path :priority ,priority :client-class ,client-class :application ,application)))
+    `(bind ((,entry-point (make-instance 'hu.dwim.web-server:websocket-broker :path ,path :priority ,priority :client-class ',client-class :application ,application)))
        ,(unless body
                 (error "You must define a websocket-entry-point with a body which does something with type and message."))
-       (defmethod websocket-message-received ((broker (eql ,entry-point))
-                                              ,(or client (gensym "client"))
-                                              ,(or message-type (gensym "message-type"))
-                                              ,message)
-           (bind ((,(or other-clients (gensym "others")) (remove ,(or client (gensym "client")) (clients-of broker))))
+       (defmethod hu.dwim.web-server:websocket-message-received ((broker (eql ,entry-point))
+                                                                 ,(or client (gensym "client"))
+                                                                 ,(or message-type (gensym "message-type"))
+                                                                 ,message)
+           (bind ((,(or other-clients (gensym "others")) (remove ,(or client (gensym "client")) (hu.dwim.web-server::clients-of broker))))
              ,@body))
-       (ensure-entry-point ,application ,entry-point)
+       (hu.dwim.web-server:ensure-entry-point ,application ,entry-point)
        ,entry-point)))

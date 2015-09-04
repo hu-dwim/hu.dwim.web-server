@@ -25,6 +25,20 @@
     (with-test-compiler-environment
       (-run-child-tests-))))
 
+(macrolet ((main-suite (name)
+             `(def suite* (,name :in root-suite) (&key (log-level +warn+))
+                (with-main-logger-level log-level
+                  (with-test-compiler-environment
+                    (-run-child-tests-))))))
+  (main-suite test)
+  (main-suite integration))
+
+(def function integration-test ()
+  (startup-test-server/project-file-server :log-level +debug+ :wait nil)
+  (sleep 2)
+  (integration)
+  (shutdown-test-server))
+
 (def definer test (name args &body body)
   `(def hu.dwim.stefil::test ,name ,args
     ;; rebind these, so that we can setf it freely in the tests...

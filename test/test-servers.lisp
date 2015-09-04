@@ -15,10 +15,23 @@
                                             (close-response response))))
                                       :maximum-worker-count maximum-worker-count)))
 
-(def function startup-test-server/project-file-server (&key (maximum-worker-count 16) (log-level +dribble+))
-  (with-main-logger-level log-level
-    (startup-test-server-with-brokers (make-directory-serving-broker "hdws" (system-relative-pathname :hu.dwim.web-server.test ""))
-                                      :maximum-worker-count maximum-worker-count)))
+(def function startup-test-server/project-file-server (&key (maximum-worker-count 16) (log-level +dribble+) (wait #t))
+  (flet ((syspath (path)
+           (system-relative-pathname :hu.dwim.web-server.test path)))
+    (with-main-logger-level log-level
+      (startup-test-server-with-brokers (list
+                                         (make-directory-serving-broker "data" (syspath "test/data")
+                                                                        :render-directory-index #f
+                                                                        :priority 0)
+                                         (make-directory-serving-broker "data/auto-dir-index" (syspath "test/data/auto-dir-index")
+                                                                        :render-directory-index #t
+                                                                        :priority 1)
+                                         (make-directory-serving-broker "data/no-dir-index" (syspath "test/data/no-dir-index")
+                                                                        :render-directory-index #f
+                                                                        :priority 1))
+
+                                        :maximum-worker-count maximum-worker-count
+                                        :wait wait))))
 
 (def function startup-test-server/performance (&key (maximum-worker-count 4) (log-level +warn+))
   (with-main-logger-level log-level

@@ -25,9 +25,10 @@
                :hu.dwim.quasi-quote.xml+hu.dwim.quasi-quote.js
                :hu.dwim.syntax-sugar
                :hu.dwim.uri
-               :hu.dwim.util.error-handling
-               :hu.dwim.util.temporary-files
-               :hu.dwim.util.zlib
+               :hu.dwim.util
+               :hu.dwim.util/error-handling
+               :hu.dwim.util/temporary-files
+               :hu.dwim.util/zlib
                :iolib
                :iolib/pathnames
                :iolib/sockets

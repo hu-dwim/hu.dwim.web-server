@@ -24,6 +24,7 @@
                :hu.dwim.logger+iolib
                :hu.dwim.quasi-quote.xml+hu.dwim.quasi-quote.js
                :hu.dwim.syntax-sugar
+               :hu.dwim.syntax-sugar/lambda-with-bang-args
                :hu.dwim.uri
                :hu.dwim.util
                :hu.dwim.util/error-handling

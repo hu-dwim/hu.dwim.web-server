@@ -14,6 +14,10 @@
 (dojo.getObject "hdws.field" #t)
 (dojo.getObject "hdws.help" #t)
 
+(dojo.require "dojo.parser")
+(dojo.require "dojo.fx")
+(dojo.require "dojox.xml.parser")
+
 (defun $ (id)
   (return (dojo.byId id)))
 

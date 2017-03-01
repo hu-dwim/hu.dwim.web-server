@@ -113,7 +113,7 @@
                                                                                         ;; between the two situations, so just drop the whole thing...
                                                                                         (when value
                                                                                           (collect (if (keywordp name)
-                                                                                                       (string-downcase (symbol-name name))
+                                                                                                       (hyphened-to-camel-case (string-downcase (symbol-name name)))
                                                                                                        name))
                                                                                           (collect value)))))
                                                    `js-piece(create :node ,id

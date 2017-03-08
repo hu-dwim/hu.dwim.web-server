@@ -37,6 +37,35 @@ Issues:
 * TODO on firefox the _m modifier key parameter accumulates when selecting tabs in a project page in hu.dwim.home :Unassigned:BUG:
 * TODO who needs to call ENSURE-HTTP-REQUEST-BODY-IS-PARSED? export it?
 
+* TODO bug "listen-entry not found for fd 0?!"
+WARNING: *COMPILED-QUERY-CACHE* is unbound, query compiler cache is disabled. See WITH-COMPILED-QUERY-CACHE and MAKE-COMPILED-QUERY-CACHE.
+
+*** At: 3644647475
+*** Message:
+Unhandled error while debugger is disabled, quitting...
+*** In thread: http worker 14
+*** Error of type SIMPLE-ERROR:
+listen-entry not found for fd 0?!
+*** Backtrace:
+12: (HU.DWIM.UTIL::DISABLED-DEBUGGER-HOOK #<SIMPLE-ERROR "listen-entry not found for fd ~A?!" {F958129}> NIL)
+13: (SB-DEBUG::RUN-HOOK SB-EXT:*INVOKE-DEBUGGER-HOOK* #<SIMPLE-ERROR "listen-entry not found for fd ~A?!" {F958129}>)
+14: (INVOKE-DEBUGGER #<SIMPLE-ERROR "listen-entry not found for fd ~A?!" {F958129}>)
+15: (ERROR #<SIMPLE-ERROR "listen-entry not found for fd ~A?!" {F958129}>)
+16: (SB-KERNEL:ASSERT-ERROR HU.DWIM.WEB-SERVER::LISTEN-ENTRY NIL NIL "listen-entry not found for fd ~A?!" 0)
+17: (HU.DWIM.WEB-SERVER::WORKER-LOOP/BODY #<BROKER-BASED-SERVER listen: 0.0.0.0/8080; brokers: 14 {A06D0C1}> T #<HU.DWIM.WEB-SERVER::WORKER {101DE299}>)
+18: (HU.DWIM.WEB-SERVER::WORKER-LOOP #<BROKER-BASED-SERVER listen: 0.0.0.0/8080; brokers: 14 {A06D0C1}> T #<HU.DWIM.WEB-SERVER::WORKER {101DE299}>)
+19: ((LAMBDA NIL :IN BORDEAUX-THREADS::BINDING-DEFAULT-SPECIALS))
+20: ((FLET #:WITHOUT-INTERRUPTS-BODY-1207 :IN SB-THREAD::INITIAL-THREAD-FUNCTION-TRAMPOLINE))
+21: ((FLET SB-THREAD::WITH-MUTEX-THUNK :IN SB-THREAD::INITIAL-THREAD-FUNCTION-TRAMPOLINE))
+22: ((FLET #:WITHOUT-INTERRUPTS-BODY-660 :IN SB-THREAD::CALL-WITH-MUTEX))
+23: (SB-THREAD::CALL-WITH-MUTEX #<CLOSURE (FLET SB-THREAD::WITH-MUTEX-THUNK :IN SB-THREAD::INITIAL-THREAD-FUNCTION-TRAMPOLINE) {B267119D}> #<SB-THREAD:MUTEX "thread result lock" owner:
+24: (SB-THREAD::INITIAL-THREAD-FUNCTION-TRAMPOLINE #<SB-THREAD:THREAD "http worker 14" RUNNING {101DE561}> #S(SB-THREAD:SEMAPHORE :NAME "Thread setup semaphore" :%COUNT 0 :WAITCOUNT 0 
+25: ("foreign function: call_into_lisp")
+26: ("foreign function: funcall0")
+27: ("foreign function: new_thread_trampoline")
+28: ("foreign function: #xB7FB9F70")
+*** End of error details
+2
 * DONE [#A] session timeout leads to 'unknown error at toplevel' in browser     :Attila:major:BUG:ARCHIVE:
   CLOSED: [2010-02-05 Fri 23:54]
 

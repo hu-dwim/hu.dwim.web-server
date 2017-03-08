@@ -60,7 +60,7 @@
    ;; :emit-short-xml-element-form nil ; browsers simply suck, but for now let's just not disable it alltogether and use "" explicitly where it's supposed to be avoided
    :encoding +default-encoding+))
 
-(define-syntax js-sharpquote ()
+(define-syntax (js-sharpquote :export t) ()
   (set-dispatch-macro-character
    #\# #\"
    (lambda (s c1 c2)
@@ -69,7 +69,7 @@
      (let ((key (read s)))
        `(|hdws.i18n.localize| ,key)))))
 
-(define-syntax sharpquote<> ()
+(define-syntax (sharpquote<> :export t) ()
   "Enable quote reader for the rest of the file (being loaded or compiled).
 #\"my i18n text\" parts will be replaced by a LOOKUP-RESOURCE call for the string."
   ;; the reader itself needs the <> syntax, so it's in utils.lisp

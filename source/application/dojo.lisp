@@ -83,7 +83,8 @@
 (def (function e) find-latest-dojo-directory-name (directory &key (otherwise :cerror))
   (loop
     (with-simple-restart (retry "Try searching for dojo directories again in ~A" directory)
-      (bind ((dojo-dir (first (sort (remove-if [not (starts-with-subseq "dojo" !1)]
+      (bind ((dojo-dir (first (sort (remove-if [or (not (starts-with-subseq "dojo" !1))
+                                                    (ends-with-subseq "disabled" !1)]
                                                (mapcar [last-elt (pathname-directory !1)]
                                                        (cl-fad:list-directory directory)))
                                     #'string>=))))

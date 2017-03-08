@@ -21,9 +21,13 @@
 (def (class* ea) application-with-dojo-support (application)
   ((dojo-skin-name "tundra")
    (dojo-file-name "dojo.js")
-   ;; FIXME ? this way it gets captured at build-time, instead of start-time
-   (dojo-directory-name (or (find-latest-dojo-directory-name (system-relative-pathname :hu.dwim.web-server "www/libraries/") :otherwise :warn)
-                            "dojotoolkit/"))))
+   (dojo-directory-name nil)))
+
+(def method startup-broker :before ((self application-with-dojo-support))
+  (unless (dojo-directory-name-of self)
+    (setf (dojo-directory-name-of self)
+          (or (find-latest-dojo-directory-name (system-relative-pathname :hu.dwim.web-server "www/libraries/") :otherwise :warn)
+              "dojotoolkit/"))))
 
 (def method startup-broker :after ((self application-with-dojo-support))
   (unless (dojo-directory-name-of self)

@@ -151,7 +151,7 @@
     (set-funcallable-instance-function client-state-sink client-state-sink-lambda)
     client-state-sink))
 
-(def (function e) register-client-state-sink (frame client-state-sink)
+(def (function e) register-client-state-sink (frame client-state-sink &key (id (id-of client-state-sink)))
   (assert (or (not (boundp '*frame*))
               (null *frame*)
               (eq *frame* frame)))
@@ -160,13 +160,24 @@
     (unless (typep client-state-sink 'client-state-sink)
       (assert (functionp client-state-sink))
       (setf client-state-sink (make-client-state-sink-using-lambda client-state-sink)))
-    (bind ((client-state-sink-id (insert-with-new-random-hash-table-key
-                                  client-state-sink-id->client-state-sink
-                                  client-state-sink
-                                  +client-state-sink-id-length+
-                                  :prefix #.(coerce "_cs_" 'simple-base-string))))
-      (setf (id-of client-state-sink) client-state-sink-id)
-      (app.dribble "Registered client-state-sink with id ~S in frame ~A" client-state-sink-id frame)))
+    (if id
+        (progn
+          (app.dribble "Registering client-state-sink with externally supplied id ~S in frame ~A" id frame)
+          (when (gethash id client-state-sink-id->client-state-sink)
+            (error 'simple-web-server-error
+                   :format-control "Tried to register a client sink with name ~S while frame ~A of session ~A already had a sink registered on that name."
+                   :format-arguments (list id *frame* *session*)))
+          (setf (gethash id client-state-sink-id->client-state-sink)
+                client-state-sink)
+          ;; just in case the user is reusing client-state-sinks and randomly profides different id's
+          (setf (id-of client-state-sink) id))
+        (bind ((client-state-sink-id (insert-with-new-random-hash-table-key
+                                      client-state-sink-id->client-state-sink
+                                      client-state-sink
+                                      +client-state-sink-id-length+
+                                      :prefix #.(coerce "_cs_" 'simple-base-string))))
+          (setf (id-of client-state-sink) client-state-sink-id)
+          (app.dribble "Registered client-state-sink with new id ~S in frame ~A" client-state-sink-id frame))))
   client-state-sink)
 
 (def function process-client-state-sinks (frame query-parameters)

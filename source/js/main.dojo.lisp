@@ -328,6 +328,17 @@
             (eval script)))
         (throw (+ "Script tag with unexpected type: '" type "'")))))
 
+#+nil ;; unused, untested
+(defun hdws.io.eval-js-at-url (url &key (sync true) (on-success (lambda (type data event)))
+                               (on-error hdws.io.process-ajax-network-error))
+  (dojo.xhrGet (create :sync sync
+                       :url url
+                       :load (lambda (type data event)
+                               (log.debug "Succesfully downloaded and eval'd script " url " in eval-js-at-url")
+                               (.apply on-success this arguments))
+                       :error on-error
+                       :handle-as "javascript")))
+
 ;; TODO implement something smarter to deal with the user clicking around on the client while the server is busy.
 ;; when sync is false, the user can stack up many ajax requests queueing on the server at the session lock...
 (defun hdws.io.xhr-post (&key url form

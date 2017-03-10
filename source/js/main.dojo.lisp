@@ -38,7 +38,7 @@
            (bind ((result (dojo.byId id)))
              (assert result "lookup of the dom node " id " in hdws.connect failed")
              (return result))))
-    (if (dojo.isArray object)
+    (if (dojo.isArray objects)
         (dolist (object objects)
           (dojo.connect (lookup object) event function))
         (return (dojo.connect (lookup objects) event function)))))

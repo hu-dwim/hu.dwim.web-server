@@ -127,7 +127,7 @@ span .ajax-request-in-progress {
 }
 
 .ajax-replacement {
-  border: 1px red solid;
+  border: 1px red solid !important;
 }
 
 .content-border.ajax-replacement {

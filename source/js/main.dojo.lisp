@@ -6,7 +6,7 @@
 
 (in-package :hu.dwim.web-server)
 
-(log.debug "Started evaluating main.dojo.js of hu.dwim.web-server")
+(log.debug "Started evaluating main.dojo.js of hu.dwim.web-server, dojo version:" (dojo.version.to-string))
 
 (dojo.getObject "hdws" #t)
 (dojo.getObject "hdws.io" #t)
@@ -17,6 +17,15 @@
 (dojo.require "dojo.parser")
 (dojo.require "dojo.fx")
 (dojo.require "dojox.xml.parser")
+
+;; TODO move it, not here
+(dojo.require "dijit.MenuBar")
+(dojo.require "dijit.MenuBarItem")
+(dojo.require "dijit.PopupMenuBarItem")
+(dojo.require "dijit.Menu")
+(dojo.require "dijit.MenuItem")
+(dojo.require "dijit.form.NumberTextBox")
+(dojo.require "dijit.form.DateTextBox")
 
 (defun $ (id)
   (return (dojo.byId id)))
@@ -306,13 +315,15 @@
 (defun hdws.io.instantiate-dojo-widgets (widget-entries)
   (log.debug "Instantiating (and destroying previous versions of) the following widgets " widget-entries)
   (dolist (entry widget-entries)
-    (bind ((dom-node ($ entry.node))
-           (dojo-type entry.type))
-      (assert dom-node "DOM node is null at widget instantiation for " entry ". Make sure you render the -id- on a tab in EMIT-DOJO-WIDGET!")
-      (setf entry.node dom-node)
-      (awhen (dijit.byId dom-node.id)
-        (.destroyRecursive it))))
-  (dojo.parser.instantiate widget-entries (create :fastpath true)))
+    (try
+         (bind ((dom-node ($ entry.node)))
+           (log.debug "Processing widget entry" dom-node entry)
+           (assert dom-node "DOM node is null at widget instantiation for " entry ". Make sure you render the -id- on a tab in EMIT-DOJO-WIDGET!")
+           (awhen (dijit.byId dom-node.id)
+             (.destroyRecursive it))
+           (dojo.parser.instantiate (array dom-node) entry (create :fastpath true)))
+      (catch (e)
+        (log.error "Instantiate failed, skipping." e)))))
 
 (defun hdws.io.postprocess-inserted-node (original-node imported-node)
   ;; this used to be needed before WITH-COLLAPSED-JS-SCRIPTS started to collect all js fragments into a toplevel script node in the ajax answer. might come handy for something later, so leave it for now...

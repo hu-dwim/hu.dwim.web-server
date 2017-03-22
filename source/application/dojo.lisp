@@ -111,7 +111,7 @@
                                     (bind (((id dojo-type &rest dojo-properties) entry))
                                       (collect (if dojo-properties
                                                    `js-piece(create :node ,id
-                                                                    :type ,dojo-type
+                                                                    :dojoType ,dojo-type
                                                                     :inherited (create
                                                                                 ,@(iter (for (name value) :on dojo-properties :by #'cddr)
                                                                                         ;; we would render a js null here otherwise, and there's no (easy?) way to differentiate
@@ -122,7 +122,7 @@
                                                                                                        name))
                                                                                           (collect value)))))
                                                    `js-piece(create :node ,id
-                                                                    :type ,dojo-type)))))))))))))
+                                                                    :dojoType ,dojo-type)))))))))))))
 
 (def (with-macro* e) render-dojo-widget (dojo-type &optional (dojo-properties '()) &key (id (generate-unique-string "_w")))
   (multiple-value-prog1

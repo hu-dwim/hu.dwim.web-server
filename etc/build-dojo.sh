@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# http://docs.dojocampus.org/build/buildScript
-# example usage: $DWIM_WORKSPACE/hu.dwim.web-server/etc/build-dojo.sh --dojo $DWIM_WORKSPACE/dojotoolkit-v1.6/ --dojo-release-dir $DWIM_WORKSPACE/hu.dwim.web-server/www/libraries/ --profile $DWIM_WORKSPACE/hu.dwim.web-server/etc/dojo-build-profile.js --locales "en-us,hu"
+# https://dojotoolkit.org/documentation/tutorials/1.10/build/index.html
+# example usage: ~/common-lisp/hu.dwim.web-server/etc/build-dojo.sh --dojo ~/workspace/dojotoolkit-v1.12/ --dojo-release-dir ~/common-lisp/hu.dwim.web-server/www/libraries/ --profile ~/common-lisp/hu.dwim.web-server/etc/dojo-build-profile.js --locales "en-us,hu"
 
 absolutize ()
 {
@@ -58,7 +58,9 @@ if [ -z "${DOJO_RELEASE_DIR}" ]; then
 fi
 
 if [ -z "${DOJO_HOME}" ]; then
-  DOJO_HOME="`dirname $0`/../../dojotoolkit"
+    #DOJO_HOME="`dirname $0`/../../dojotoolkit"
+    echo Please provide the checked out dojo dir using the --dojo arg!
+    exit 1
 fi
 
 HDWS_HOME=`absolutize "$HDWS_HOME"`
@@ -70,14 +72,15 @@ if [ -z "${DOJO_PROFILE}" ]; then
 fi
 
 if [ -z "${DOJO_RELEASE_NAME}" ]; then
-  DOJO_RELEASE_NAME=`cd ${DOJO_HOME}; svn info | grep URL: | awk -F '/' '{print $NF}'`
-  DOJO_RELEASE_NAME=${DOJO_RELEASE_NAME}-`cd ${DOJO_HOME}; svn info | grep Revision: | awk '{print $2}'`
+    DOJO_RELEASE_NAME=`cd ${DOJO_HOME}/dojo; git describe --tags HEAD`
+    #DOJO_RELEASE_NAME=`cd ${DOJO_HOME}; svn info | grep URL: | awk -F '/' '{print $NF}'`
+    #DOJO_RELEASE_NAME=${DOJO_RELEASE_NAME}-`cd ${DOJO_HOME}; svn info | grep Revision: | awk '{print $2}'`
 fi
 
 #echo "Remaining arguments:"
 #for arg do echo '--> '"\`$arg'" ; done
 
-echo "Will build dojo into ${DOJO_RELEASE_DIR} now..."
+echo "Will build dojo into '${DOJO_RELEASE_DIR}' now, with name '${DOJO_RELEASE_NAME}'..."
 echo "Assuming the following parameters:"
 echo "profile             - $DOJO_PROFILE"
 echo "locales             - $LOCALE_LIST"
@@ -98,4 +101,6 @@ echo Starting the dojo build script now...
 echo
 
 cd "${DOJO_HOME}/util/buildscripts"
-sh ./build.sh action="clean,release" version="${DOJO_RELEASE_NAME}" profileFile="$DOJO_PROFILE" releaseDir="${DOJO_RELEASE_DIR}" releaseName="dojotoolkit-${DOJO_RELEASE_NAME}" copyTests=false layerOptimize=shrinksafe.keepLines localeList="${LOCALE_LIST}"
+#careful... rm -r ${DOJO_RELEASE_DIR}/dojotoolkit-${DOJO_RELEASE_NAME}
+sh ./build.sh --profile "$DOJO_PROFILE" --version "${DOJO_RELEASE_NAME}" --releaseDir "${DOJO_RELEASE_DIR}" --releaseName "dojotoolkit-${DOJO_RELEASE_NAME}" $@
+#sh ./build.sh action="clean,release" version="${DOJO_RELEASE_NAME}" profileFile="$DOJO_PROFILE" releaseDir="${DOJO_RELEASE_DIR}" releaseName="dojotoolkit-${DOJO_RELEASE_NAME}" copyTests=false layerOptimize=shrinksafe.keepLines localeList="${LOCALE_LIST}"

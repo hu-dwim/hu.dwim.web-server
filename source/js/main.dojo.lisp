@@ -535,7 +535,10 @@
                       "dom-replacements"
                       (lambda (replacement-node)
                         (bind ((id (.getAttribute replacement-node "id"))
-                               (old-node ($ id)))
+                               (old-dijit-node (dijit.byId id))
+                               (old-node (if old-dijit-node
+                                             (slot-value old-dijit-node 'domNode)
+                                             ($ id))))
                           (if old-node
                               (bind ((parent-node (slot-value old-node 'parent-node))
                                      (old-opacity (Math.min (dojo.style old-node "opacity") 0.5)))
@@ -549,11 +552,17 @@
                                 (log.debug "Fading back replacement-node " replacement-node)
                                 (bind ((animation (hdws.io.make-ajax-replacement-fade-in replacement-node old-opacity)))
                                   (hdws.connect animation "onEnd"
-                                               (lambda ()
-                                                 (unless (eq replacement-node (dojo.byId id))
-                                                   ;; KLUDGE this should not happen, but it happens with context menus...
-                                                   (log.warn "Setting opacity to 1 of orphaned replacement-node with id " id)
-                                                   (dojo.style (dojo.byId id) "opacity" 1))))
+                                                (lambda ()
+                                                  (unless (eq replacement-node (dojo.byId id))
+                                                    ;; KLUDGE this should not happen, but it happens with context menus...
+                                                    ;; BT: this might happen when instantiate-dojo-widgets replaces the replacement-node,
+                                                    ;;     e.g. the <select> node of FilteringSelect is replaced by an <input type="text"> element.
+                                                    (log.warn "Setting opacity to 1 of orphaned replacement-node with id " id)
+                                                    (bind ((new-dijit-node (dijit.byId id))
+                                                           (new-node (if new-dijit-node
+                                                                         (slot-value new-dijit-node 'domNode)
+                                                                         (dojo.byId id))))
+                                                      (dojo.style new-node "opacity" 1)))))
                                   (.play animation))
                                 (log.debug "Successfully replaced node with id " id))
                               (progn
@@ -568,16 +577,16 @@
           (log.debug "...dom-replacer returned")
           ;; look for 'script' tags and execute them with 'current-ajax-answer' bound
           (let ((script-evaluator (hdws.io.make-ajax-answer-processor "script"
-                                                                     (lambda (script-node)
-                                                                       ;; TODO handle/assert for script type attribute
-                                                                       (let ((script (dojox.xml.parser.textContent script-node)))
-                                                                         (log.debug "About to eval AJAX-received script " #\Newline script)
-                                                                         ;; isolate the local bindings from the script to be executed
-                                                                         ;; and only bind with the given name what we explicitly list here
-                                                                         ((lambda (_script current-ajax-answer)
-                                                                            (eval _script)) script response)
-                                                                         (log.debug "Finished eval-ing AJAX-received script")))
-                                                                     false true)))
+                                                                      (lambda (script-node)
+                                                                        ;; TODO handle/assert for script type attribute
+                                                                        (let ((script (dojox.xml.parser.textContent script-node)))
+                                                                          (log.debug "About to eval AJAX-received script " #\Newline script)
+                                                                          ;; isolate the local bindings from the script to be executed
+                                                                          ;; and only bind with the given name what we explicitly list here
+                                                                          ((lambda (_script current-ajax-answer)
+                                                                             (eval _script)) script response)
+                                                                          (log.debug "Finished eval-ing AJAX-received script")))
+                                                                      false true)))
             (log.debug "Calling script-evaluator...")
             (script-evaluator response args)
             (log.debug "...script-evaluator returned")))))

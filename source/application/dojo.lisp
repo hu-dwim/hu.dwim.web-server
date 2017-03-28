@@ -112,15 +112,17 @@
                                       (collect (if dojo-properties
                                                    `js-piece(create :node ,id
                                                                     :dojoType ,dojo-type
-                                                                    :inherited (create
-                                                                                ,@(iter (for (name value) :on dojo-properties :by #'cddr)
-                                                                                        ;; we would render a js null here otherwise, and there's no (easy?) way to differentiate
-                                                                                        ;; between the two situations, so just drop the whole thing...
-                                                                                        (when value
-                                                                                          (collect (if (keywordp name)
-                                                                                                       (hyphened-to-camel-case (string-downcase (symbol-name name)))
-                                                                                                       name))
-                                                                                          (collect value)))))
+                                                                    :inherited
+                                                                    (dojo.mixin (lambda ())
+                                                                                (create
+                                                                                 ,@(iter (for (name value) :on dojo-properties :by #'cddr)
+                                                                                         ;; we would render a js null here otherwise, and there's no (easy?) way to differentiate
+                                                                                         ;; between the two situations, so just drop the whole thing...
+                                                                                         (when value
+                                                                                           (collect (if (keywordp name)
+                                                                                                        (hyphened-to-camel-case (string-downcase (symbol-name name)))
+                                                                                                        name))
+                                                                                           (collect value))))))
                                                    `js-piece(create :node ,id
                                                                     :dojoType ,dojo-type)))))))))))))
 

@@ -350,3 +350,11 @@
   (with-lock-held-on-application (application)
     (iter (for (key session) :in-hashtable (session-id->session-of application))
           (mark-expired session))))
+
+;; these are debug helpers
+(def (function e) the-only-session (application)
+  (the-only-element (hash-table-values (session-id->session-of application))))
+
+(def (function e) the-only-frame (application)
+  (bind ((session (the-only-session application)))
+    (the-only-element (hash-table-values (hu.dwim.web-server::frame-id->frame-of session)))))

@@ -314,16 +314,44 @@
 ;; open dojo issue about (sometimes defaulting) node.type taking precedence over node.dojoType: http://bugs.dojotoolkit.org/ticket/10951
 (defun hdws.io.instantiate-dojo-widgets (widget-entries)
   (log.debug "Instantiating (and destroying previous versions of) the following widgets " widget-entries)
-  (dolist (entry widget-entries)
-    (try
-         (bind ((dom-node ($ entry.node)))
-           (log.debug "Processing widget entry" dom-node entry)
-           (assert dom-node "DOM node is null at widget instantiation for " entry ". Make sure you render the -id- on a tag in RENDER-DOJO-WIDGET!")
-           (awhen (dijit.byId dom-node.id)
-             (.destroyRecursive it))
-           (dojo.parser.instantiate (array dom-node) entry (create :fastpath true)))
-      (catch (e)
-        (log.error "Instantiate failed, skipping." e)))))
+
+  ;; this works on dojo 1.6. when experimenting, remember to render :type ,dojo-type into the widget entry in dojo.lisp
+  #+nil
+  (progn
+    (dolist (entry widget-entries)
+      (bind ((dom-node ($ entry.node)))
+        (assert dom-node "DOM node is null at widget instantiation for " entry ". Make sure you render the -id- on a tag in RENDER-DOJO-WIDGET!")
+        (setf entry.node dom-node) ;; deleting this breaks dojo 1.6
+        (awhen (dijit.byId dom-node.id)
+          (.destroyRecursive it))))
+    (dojo.parser.instantiate widget-entries (create :fastpath true)))
+
+  ;; this doesn't work on dojo 1.6. but why?
+  ;; the following seems to be the case: calling dojo.parser.instantiate one by one doesn't work, but it does work when calling it with an array of every widget
+  #+nil
+  (progn
+    (dolist (entry widget-entries)
+      (try
+           (bind ((dom-node ($ entry.node)))
+             (assert dom-node "DOM node is null at widget instantiation for " entry ". Make sure you render the -id- on a tag in RENDER-DOJO-WIDGET!")
+             (setf entry.node dom-node) ;; deleting this breaks dojo 1.6
+             (awhen (dijit.byId dom-node.id)
+               (.destroyRecursive it))
+             (dojo.parser.instantiate (array entry) (create :fastpath true)))
+        (catch (e)
+          (log.error "Instantiate failed, skipping." e)))))
+
+  ;; this is for dojo 1.12.2
+  (bind ((dom-nodes (array)))
+    (dolist (entry widget-entries)
+      (bind ((dom-node ($ entry.node)))
+        (assert dom-node "DOM node is null at widget instantiation for " entry ". Make sure you render the -id- on a tag in RENDER-DOJO-WIDGET!")
+        (dom-nodes.push dom-node)
+        (dom-node.setAttribute "data-dojo-type" (slot-value entry "data-dojo-type"))
+        (setf entry.node dom-node) ;; deleting this breaks dojo 1.6
+        (awhen (dijit.byId dom-node.id)
+          (.destroyRecursive it))))
+    (dojo.parser.instantiate dom-nodes)))
 
 (defun hdws.io.postprocess-inserted-node (original-node imported-node)
   ;; this used to be needed before WITH-COLLAPSED-JS-SCRIPTS started to collect all js fragments into a toplevel script node in the ajax answer. might come handy for something later, so leave it for now...

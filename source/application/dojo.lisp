@@ -111,7 +111,7 @@
                                     (bind (((id dojo-type &rest dojo-properties) entry))
                                       (collect (if dojo-properties
                                                    `js-piece(create :node ,id
-                                                                    :dojoType ,dojo-type
+                                                                    "data-dojo-type" ,dojo-type
                                                                     :inherited
                                                                     (dojo.mixin (lambda ())
                                                                                 (create
@@ -124,7 +124,7 @@
                                                                                                         name))
                                                                                            (collect value))))))
                                                    `js-piece(create :node ,id
-                                                                    :dojoType ,dojo-type)))))))))))))
+                                                                    "data-dojo-type" ,dojo-type)))))))))))))
 
 (def (with-macro* e) render-dojo-widget (dojo-type &optional (dojo-properties '()) &key (id (generate-unique-string "_w")))
   (multiple-value-prog1

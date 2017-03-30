@@ -8,6 +8,9 @@
 
 (def (constant e) +login-identifier-cookie-name+           "login-identifier")
 (def (constant e) +login-entry-point-path+                 "login/")
+;; TODO make a consistent naming convention for parameter-name stuff. these three have an extra 'query' in their name compared to others.
+;; TODO or even better: make these params first class citizens, and properly update or refactor *clone-request-uri/default-strip-query-parameters*
+;; TODO why are these here, in this file?
 (def (constant e) +session-timed-out-query-parameter-name+ "timed-out")
 (def (constant e) +user-action-query-parameter-name+       "user-action")
 (def (constant e) +continue-url-query-parameter-name+      "continue-url")

@@ -318,7 +318,7 @@
     (try
          (bind ((dom-node ($ entry.node)))
            (log.debug "Processing widget entry" dom-node entry)
-           (assert dom-node "DOM node is null at widget instantiation for " entry ". Make sure you render the -id- on a tab in EMIT-DOJO-WIDGET!")
+           (assert dom-node "DOM node is null at widget instantiation for " entry ". Make sure you render the -id- on a tag in RENDER-DOJO-WIDGET!")
            (awhen (dijit.byId dom-node.id)
              (.destroyRecursive it))
            (dojo.parser.instantiate (array dom-node) entry (create :fastpath true)))

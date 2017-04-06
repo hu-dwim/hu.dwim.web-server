@@ -86,7 +86,7 @@
       (bind ((dojo-dir (first (sort (remove-if [or (not (starts-with-subseq "dojo" !1))
                                                     (ends-with-subseq "disabled" !1)]
                                                (mapcar [last-elt (pathname-directory !1)]
-                                                       (cl-fad:list-directory directory)))
+                                                       (uiop:directory* directory)))
                                     #'string>=))))
       (return
         (if dojo-dir

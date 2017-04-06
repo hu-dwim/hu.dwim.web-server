@@ -13,7 +13,6 @@
                :babel-streams
                :bordeaux-threads
                :cffi
-               :cl-fad ; TODO replace with iolib
                :cl+ssl
                :hu.dwim.common
                :hu.dwim.computed-class

@@ -19,6 +19,7 @@
 (dojo.require "dojo.parser")
 (dojo.require "dojo.fx")
 (dojo.require "dojox.xml.parser")
+(dojo.require "dijit.popup")
 
 ;; TODO move it, not here
 (dojo.require "dijit.MenuBar")
@@ -359,6 +360,8 @@
 
   ;; this works for dojo 1.12.2
   (bind ((widgets (array)))
+    ;; KLUDGE close popups here, otherwise an exception is thrown when they are closed but their dom node has already been deleted
+    (dijit.popup.close)
     ;; phase 1: lookup dom nodes first, because instantiate can remove them from the dom tree
     (dolist (entry widget-entries)
       (bind ((dom-node ($ entry.node)))

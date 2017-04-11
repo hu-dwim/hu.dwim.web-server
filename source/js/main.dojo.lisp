@@ -344,6 +344,7 @@
           (log.error "Instantiate failed, skipping." e)))))
 
   ;; this is for dojo 1.12.2
+  #+nil
   (bind ((dom-nodes (array)))
     (dolist (entry widget-entries)
       (bind ((dom-node ($ entry.node)))
@@ -354,7 +355,30 @@
         (setf entry.node dom-node) ;; deleting this breaks dojo 1.6
         (awhen (dijit.byId dom-node.id)
           (.destroyRecursive it))))
-    (dojo.parser.instantiate dom-nodes)))
+    (dojo.parser.instantiate dom-nodes))
+
+  ;; this works for dojo 1.12.2
+  (bind ((widgets (array)))
+    ;; phase 1: lookup dom nodes first, because instantiate can remove them from the dom tree
+    (dolist (entry widget-entries)
+      (bind ((dom-node ($ entry.node)))
+        (assert dom-node "DOM node is null at widget instantiation for " entry ". Make sure you render the -id- on a tag in RENDER-DOJO-WIDGET!")
+        (setf entry.node dom-node)))
+    ;; phase 2: instantiate one-by-one but do not execute startup()
+    (dolist (entry widget-entries)
+      (bind ((dom-node entry.node))
+        (dom-node.setAttribute "data-dojo-type" (slot-value entry "data-dojo-type"))
+        (awhen (dijit.byId dom-node.id)
+          ;; FIXME when destroying a MenuBar, popups are also destroyed, but dijit.popup._stack might have a reference to them
+          ;;       causing an exception
+          (.destroyRecursive it))
+        ;; TODO rename 'inherited' to 'mixin'
+        (widgets.push (aref (dojo.parser.instantiate (array dom-node) entry.inherited (create :no-start #t)) 0))))
+    ;; phase 3: execute startup methods after each widget got instantiated
+    (dolist (widget widgets)
+      (when (and (=== (type-of widget.startup) "function")
+                 (not widget._started))
+          (widget.startup)))))
 
 (defun hdws.io.postprocess-inserted-node (original-node imported-node)
   ;; this used to be needed before WITH-COLLAPSED-JS-SCRIPTS started to collect all js fragments into a toplevel script node in the ajax answer. might come handy for something later, so leave it for now...

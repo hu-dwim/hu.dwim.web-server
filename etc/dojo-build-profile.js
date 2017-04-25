@@ -78,6 +78,7 @@ var profile = {
                           "dijit/PopupMenuBarItem",
                           "dijit/Menu",
                           "dijit/MenuItem",
+                          "dijit/Editor",
                           "dijit/form/NumberTextBox",
                           "dijit/form/DateTextBox",
                           "dijit/Dialog",

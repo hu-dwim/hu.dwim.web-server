@@ -63,10 +63,6 @@ if [ -z "${DOJO_HOME}" ]; then
     exit 1
 fi
 
-HDWS_HOME=`absolutize "$HDWS_HOME"`
-DOJO_HOME=`absolutize "$DOJO_HOME"`
-DOJO_RELEASE_DIR=`absolutize "$DOJO_RELEASE_DIR"`
-
 if [ -z "${DOJO_PROFILE}" ]; then
   DOJO_PROFILE="${HDWS_HOME}/etc/dojo-build-profile.js"
 fi
@@ -76,6 +72,11 @@ if [ -z "${DOJO_RELEASE_NAME}" ]; then
     #DOJO_RELEASE_NAME=`cd ${DOJO_HOME}; svn info | grep URL: | awk -F '/' '{print $NF}'`
     #DOJO_RELEASE_NAME=${DOJO_RELEASE_NAME}-`cd ${DOJO_HOME}; svn info | grep Revision: | awk '{print $2}'`
 fi
+
+HDWS_HOME=`absolutize "$HDWS_HOME"`
+DOJO_HOME=`absolutize "$DOJO_HOME"`
+DOJO_RELEASE_DIR=`absolutize "$DOJO_RELEASE_DIR"`
+DOJO_PROFILE=`absolutize "$DOJO_PROFILE"`
 
 #echo "Remaining arguments:"
 #for arg do echo '--> '"\`$arg'" ; done

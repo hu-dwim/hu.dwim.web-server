@@ -66,7 +66,38 @@ var profile = {
 			customBase: true
 		},
 
-		// In this demo application, we load `app/main` on the client-side, so here we build a separate layer containing
+	    'dojo/dojo-full': {
+                include: ["dojo/main",
+                          "dojo/parser",
+                          "dojo/fx",
+                          "dojo/string",
+                          "dojo/cache",
+                          "dojox/xml/parser",
+                          "dijit/MenuBar",
+                          "dijit/MenuBarItem",
+                          "dijit/PopupMenuBarItem",
+                          "dijit/Menu",
+                          "dijit/MenuItem",
+                          "dijit/form/NumberTextBox",
+                          "dijit/form/DateTextBox",
+                          "dijit/Dialog",
+                          "dijit/TooltipDialog",
+                          "dijit/InlineEditBox",
+                          "dijit/form/Form",
+                          "dijit/form/ComboBoxMixin",
+                          "dijit/form/ToggleButton",
+                          "dijit/form/FilteringSelect",
+                          "dijit/form/ValidationTextBox",
+                          "dojox/form/Uploader",
+                          "dojox/form/uploader/plugins/HTML5",
+                          "dojox/form/uploader/FileList",
+                          //"ekor/_editor/plugins/InsertVariable",
+                         ],
+		boot: true,
+		customBase: false
+		},
+
+	        // In this demo application, we load `app/main` on the client-side, so here we build a separate layer containing
 		// that code. (Practically speaking, you would probably just want to roll everything into the `dojo/dojo` layer,
 		// but this helps provide a basic illustration of how multi-layer builds work.) Note that when you create a new
 		// layer, the module referenced by the layer is always included in the layer (in this case, `app/main`), so it

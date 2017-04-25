@@ -1,16 +1,8 @@
 // based on https://github.com/csnover/dojo-boilerplate/blob/master/profiles/app.profile.js
 
 var profile = {
-	// `basePath` is relative to the directory containing this profile file; in this case, it is being set to the
-	// src/ directory, which is the same place as the `baseUrl` directory in the loader configuration. (If you change
-	// this, you will also need to update run.js.)
-	basePath: '/home/alendvai/workspace/dojotoolkit-v1.12/',
-
-	// This is the directory within the release directory where built packages will be placed. The release directory
-	// itself is defined by `build.sh`. You should probably not use this; it is a legacy option dating back to Dojo
-	// 0.4.
-	// If you do use this, you will need to update build.sh, too.
-	// releaseName: '',
+	// `basePath` is relative to the directory containing this profile file
+	basePath: '../../dojotoolkit/',
 
 	// Builds a new release.
 	action: 'release',
@@ -34,8 +26,6 @@ var profile = {
 	// build profile.
 	packages: [
 		// Using a string as a package is shorthand for `{ name: 'app', location: 'app' }`
-		//'app',
-		//'dgrid',
 		'dijit',
 		'dojo',
 		'dojox'
@@ -120,10 +110,10 @@ var profile = {
 		// that either.
 		'dojo-publish-privates': false,
 
-		// This application is pure AMD, so get rid of the legacy loader.
+		// If this application is pure AMD, then get rid of the legacy loader.
 		'dojo-sync-loader': true,
 
-		// `dojo-xhr-factory` relies on `dojo-sync-loader`, which we have removed.
+		// `dojo-xhr-factory` relies on `dojo-sync-loader`.
 		'dojo-xhr-factory': true,
 
 		// We are not loading tests in production, so we can get rid of some test sniffing code.

@@ -5,15 +5,7 @@
 
 absolutize ()
 {
-  if [ ! -d "$1" ]; then
-    echo
-    echo "ERROR: '$1' doesn't exist or not a directory!"
-    exit -1
-  fi
-
-  cd "$1"
-  echo `pwd`
-  cd - >/dev/null
+    echo `readlink -f ${1}`
 }
 
 LOCALE_LIST="en-us"

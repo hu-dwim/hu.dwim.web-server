@@ -53,5 +53,5 @@
   (slot-name.running-in-test-mode "running in test mode")
   (slot-name.ajax-enabled "ajax enabled")
   (slot-name.dojo-skin-name "dojo skin name")
-  (slot-name.dojo-file-name "dojo file name")
-  (slot-name.dojo-directory-name "dojo directory name"))
+  (slot-name.dojo-script-uri "dojo script URI")
+  (slot-name.dojo-base-uri "dojo base URI"))

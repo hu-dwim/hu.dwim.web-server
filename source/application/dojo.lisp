@@ -11,36 +11,41 @@
 
 (def (special-variable e) *dojo-skin-name*)
 
-(def (special-variable e) *dojo-file-name*)
+(def (special-variable e) *dojo-script-uri*)
 
-(def (special-variable e) *dojo-directory-name*)
+(def (special-variable e) *dojo-base-uri*)
 
 ;;;;;;
 ;;; application-with-dojo-support
 
 (def (class* ea) application-with-dojo-support (application)
   ((dojo-skin-name "tundra")
-   (dojo-file-name "dojo.js")
-   (dojo-directory-name nil)))
+   (dojo-script-uri nil)
+   (dojo-base-uri nil)))
 
 (def method startup-broker :before ((self application-with-dojo-support))
-  (unless (dojo-directory-name-of self)
-    (setf (dojo-directory-name-of self)
-          (or (find-latest-dojo-directory-name (system-relative-pathname :hu.dwim.web-server "www/libraries/") :otherwise :warn)
-              "dojotoolkit/"))))
+  (bind (((:slots dojo-base-uri dojo-script-uri) self))
+    (unless dojo-base-uri
+      (awhen (find-latest-dojo-directory-name (system-relative-pathname :hu.dwim.web-server "www/libraries/") :otherwise :warn)
+        (setf dojo-base-uri
+              (net.uri:parse-uri (string+ "static/hdws/libraries/" it)))))
+    (setf dojo-script-uri
+          (hu.dwim.uri:ensure-parsed-uri dojo-script-uri))
+    (setf dojo-base-uri
+          (hu.dwim.uri:ensure-parsed-uri dojo-base-uri))))
 
 (def method startup-broker :after ((self application-with-dojo-support))
-  (unless (dojo-directory-name-of self)
+  (unless (dojo-base-uri-of self)
     (warn "The ~S slot of application ~A is not initialized by the time the server was started! Please refer to the install guide (e.g. on http://dwim.hu) or the sources for details on how to build dojo."
-          'dojo-directory-name self)))
+          'dojo-base-uri self)))
 
 (def method call-in-application-environment :around ((application application-with-dojo-support) session thunk)
   (bind ((*dojo-skin-name* (or (dojo-skin-name-of application)
                                *dojo-skin-name*))
-         (*dojo-file-name* (or (dojo-file-name-of application)
-                               *dojo-file-name*))
-         (*dojo-directory-name* (or (dojo-directory-name-of application)
-                                    *dojo-directory-name*)))
+         (*dojo-script-uri* (or (dojo-script-uri-of application)
+                                *dojo-script-uri*))
+         (*dojo-base-uri* (hu.dwim.uri:prepend-path (hu.dwim.uri:clone-uri (dojo-base-uri-of application))
+                                                    (path-of application))))
     (call-next-method)))
 
 ;;;;;;

@@ -2,7 +2,7 @@
 
 var profile = {
 	// `basePath` is relative to the directory containing this profile file
-	basePath: '../../dojotoolkit/',
+	basePath: '../../../workspace/dojotoolkit/',
 
 	// Builds a new release.
 	action: 'release',
@@ -56,18 +56,13 @@ var profile = {
 			customBase: true
 		},
 
-	    'dojo/dojo-full': {
+	    'dojo/dojo-bundle': {
                 include: ["dojo/main",
                           "dojo/parser",
                           "dojo/fx",
                           "dojo/string",
                           "dojo/cache",
                           "dojox/xml/parser",
-                          "dijit/MenuBar",
-                          "dijit/MenuBarItem",
-                          "dijit/PopupMenuBarItem",
-                          "dijit/Menu",
-                          "dijit/MenuItem",
                           "dijit/Editor",
                           "dijit/form/NumberTextBox",
                           "dijit/form/DateTextBox",
@@ -82,10 +77,9 @@ var profile = {
                           "dojox/form/Uploader",
                           "dojox/form/uploader/plugins/HTML5",
                           "dojox/form/uploader/FileList",
-                          //"ekor/_editor/plugins/InsertVariable",
                          ],
 		boot: true,
-		customBase: false
+		customBase: true
 		},
 
 	        // In this demo application, we load `app/main` on the client-side, so here we build a separate layer containing

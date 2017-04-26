@@ -6,7 +6,9 @@
 
 (in-package :hu.dwim.web-server)
 
-(log.debug "Started evaluating main.dojo.js of hu.dwim.web-server, dojo version:" (dojo.version.to-string))
+(log.debug "Started evaluating main.dojo.js of hu.dwim.web-server")
+
+(log.debug "Dojo version:" (dojo.version.to-string))
 
 (dojo.getObject "hdws" #t)
 (dojo.getObject "hdws.io" #t)
@@ -345,6 +347,7 @@
   (bind ((dom-nodes (array)))
     (dolist (entry widget-entries)
       (bind ((dom-node ($ entry.node)))
+        (log.debug "Processing widget entry" entry)
         (assert dom-node "DOM node is null at widget instantiation for " entry ". Make sure you render the -id- on a tag in RENDER-DOJO-WIDGET!")
         (dom-nodes.push dom-node)
         (dom-node.setAttribute "data-dojo-type" (slot-value entry "data-dojo-type"))

@@ -115,7 +115,7 @@
                (collect `(def (entry-point ,@-options-) (,application ,@entry)))))))
 
 (def (definer e) file-serving-entry-point (application path root-directory &key allow-access-to-external-files priority)
-  ;; TODO it should dispatch on (cl-fad:directory-pathname-p root-directory) to chose the type, but at macroexpand time root-directory can be a form, not only a pathname
+  ;; TODO it should dispatch on (uiop:directory-pathname-p root-directory) to chose the type, but at macroexpand time root-directory can be a form, not only a pathname
   `(def (entry-point ,@-options-) (,application directory-serving-broker
                                                 :path ,path
                                                 :root-directory ,root-directory

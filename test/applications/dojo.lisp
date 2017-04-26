@@ -20,8 +20,8 @@
 ;; this is a stripped down version of the one in hu.dwim.presentation/source/component/widget/frame.lisp
 (def with-macro* emit-html-document/dojo (&key stylesheet-uris (script-uris (list (hu.dwim.uri:parse-uri "/hdws/js/main.dojo.js")))
                                                (content-mime-type +xhtml-mime-type+) (encoding :utf-8) title
-                                               (parse-dojo-widgets-on-load #f) (dojo-file-name "dojo.js") (dojo-skin-name "tundra")
-                                               (dojo-release-uri (hu.dwim.uri:parse-uri (string+ "/static/hdws/libraries/" *dojo-directory-name*))))
+                                               (parse-dojo-widgets-on-load #f) (dojo-script-uri "dojo.js") (dojo-skin-name "tundra")
+                                               (dojo-script-uri (hu.dwim.uri:append-path (hu.dwim.uri:clone-uri *dojo-base-uri*) "dojo/dojo.js")))
   (bind ((application *application*)
          (application-path (path-of application))
          (debug-client-side? (debug-client-side? nil)))
@@ -37,7 +37,7 @@
                          "dijit/themes/dijit_rtl.css"))
             <link (:rel "stylesheet"
                    :type "text/css"
-                   :href ,(string+ "/static/hdws/libraries/" *dojo-directory-name* file))>)
+                   :href ,(hu.dwim.uri:print-uri-to-string (hu.dwim.uri:append-path (hu.dwim.uri:clone-uri *dojo-base-uri*) file)))>)
         ,(foreach (lambda (stylesheet-uri)
                     <link (:rel "stylesheet"
                            :type "text/css"
@@ -46,7 +46,8 @@
                                     (hu.dwim.uri:print-uri-to-string uri)))>)
                   stylesheet-uris)
         <script (:type +javascript-mime-type+)
-          ,(string+ "djConfig = { baseUrl: '" (hu.dwim.uri:print-uri-to-string dojo-release-uri) "dojo/'"
+                ;; TODO FIXME this is probably broken here...
+          ,(string+ "djConfig = { baseUrl: '" (hu.dwim.uri:print-uri-to-string *dojo-base-uri*) "dojo/'"
                     ", parseOnLoad: " (to-js-boolean parse-dojo-widgets-on-load)
                     ", isDebug: " (to-js-boolean debug-client-side?)
                     ;; TODO add separate flag for debugAtAllCosts
@@ -55,12 +56,12 @@
                     ", locale: " (to-js-literal (locale-name (locale (first (ensure-list (default-locale-of application))))))
                     "}")>
         <script (:type +javascript-mime-type+
-                 :src  ,(bind ((uri (hu.dwim.uri:clone-uri dojo-release-uri)))
-                          (hu.dwim.uri:append-path uri "dojo/")
-                          (hu.dwim.uri:append-path uri (if debug-client-side?
-                                                           (string+ dojo-file-name ".uncompressed.js")
-                                                           dojo-file-name))
-                          (hu.dwim.uri:print-uri-to-string uri)))
+                 :src ,(bind ((uri (hu.dwim.uri:clone-uri dojo-release-uri)))
+                         (hu.dwim.uri:append-path uri "dojo/")
+                         (hu.dwim.uri:append-path uri (if debug-client-side?
+                                                          (string+ dojo-script-uri ".uncompressed.js")
+                                                          dojo-file-name))
+                         (hu.dwim.uri:print-uri-to-string uri)))
                  ;; it must have an empty body because browsers don't like collapsed <script ... /> in the head
                  "">
         ,(foreach (lambda (script-uri)

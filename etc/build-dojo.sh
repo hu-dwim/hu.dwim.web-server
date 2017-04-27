@@ -102,4 +102,4 @@ echo
 
 cd "${DOJO_HOME}/util/buildscripts"
 #careful... rm -r ${DOJO_RELEASE_DIR}/dojotoolkit-${DOJO_RELEASE_NAME}
-sh ./build.sh --profile "$DOJO_PROFILE" --version "${DOJO_RELEASE_NAME}" --releaseDir "${DOJO_RELEASE_DIR}" --releaseName "dojotoolkit-${DOJO_RELEASE_NAME}" $@
+sh ./build.sh --profile "$DOJO_PROFILE" --basePath "${DOJO_HOME}" --version "${DOJO_RELEASE_NAME}" --releaseDir "${DOJO_RELEASE_DIR}" --releaseName "dojotoolkit-${DOJO_RELEASE_NAME}" $@

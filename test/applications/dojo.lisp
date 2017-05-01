@@ -20,7 +20,7 @@
 ;; this is a stripped down version of the one in hu.dwim.presentation/source/component/widget/frame.lisp
 (def with-macro* emit-html-document/dojo (&key stylesheet-uris (script-uris (list (hu.dwim.uri:parse-uri "/hdws/js/main.dojo.js")))
                                                (content-mime-type +xhtml-mime-type+) (encoding :utf-8) title
-                                               (parse-dojo-widgets-on-load #f) (dojo-script-uri "dojo.js") (dojo-skin-name "tundra")
+                                               (parse-dojo-widgets-on-load #f) (dojo-script-name "dojo.js") (dojo-skin-name "tundra")
                                                (dojo-script-uri (hu.dwim.uri:append-path (hu.dwim.uri:clone-uri *dojo-base-uri*) "dojo/dojo.js")))
   (bind ((application *application*)
          (application-path (path-of application))

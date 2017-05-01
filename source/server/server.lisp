@@ -671,7 +671,7 @@
 
 (def (function eio) make-content-disposition-header-value (&key (content-disposition "attachment") size file-name)
   (awhen size
-    (setf content-disposition (string+ content-disposition ";size=" it)))
+    (setf content-disposition (string+ content-disposition ";size=" (integer-to-string it))))
   (awhen file-name
     (setf content-disposition (string+ content-disposition ";filename=\"" (hu.dwim.uri:percent-encoding/encode it) "\"")))
   content-disposition)

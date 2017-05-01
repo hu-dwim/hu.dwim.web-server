@@ -67,6 +67,7 @@
    (raw-uri :type string)
    (uri :type hu.dwim.uri:uri)
    (query-parameters :type list :documentation "Holds all the query parameters from the uri and/or the request body")
+   (request-body-has-been-parsed? nil :type boolean)
    (accept-encodings :type list :documentation "An alist cache of the parsed ACCEPT-ENDODINGS header value. Its accessor lazily initializes the slot.")))
 
 (def (function e) https-request? (&optional (request *request*))

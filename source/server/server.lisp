@@ -479,10 +479,16 @@
 
 (def function ensure-http-request-body-is-parsed (request &key (length-limit *length-limit/http-request-body*))
   (bind ((*length-limit/http-request-body* length-limit))
-    (setf (query-parameters-of request) (parse-http-request/body (client-stream-of request)
-                                                                 (header-value request +header/content-length+)
-                                                                 (header-value request +header/content-type+)
-                                                                 (query-parameters-of request))))
+    (if (request-body-has-been-parsed? request)
+        ;; NOTE: is it a bug when this happens?
+        (http.dribble "~S: already parsed" -this-function/name-)
+        (progn
+          (http.dribble "~S is initiating the parsing of the request body" -this-function/name-)
+          (setf (request-body-has-been-parsed? request) t)
+          (setf (query-parameters-of request) (parse-http-request/body (client-stream-of request)
+                                                                       (header-value request +header/content-length+)
+                                                                       (header-value request +header/content-type+)
+                                                                       (query-parameters-of request))))))
   request)
 
 (def method handle-request :around ((server server) (request http-request))

@@ -321,10 +321,10 @@
   ((last-modified-at nil)
    (body :type (or list vector))))
 
-(def (function e) make-byte-vector-response* (bytes &key headers cookies last-modified-at seconds-until-expires content-type)
+(def (function e) make-byte-vector-response* (bytes &key headers cookies last-modified-at seconds-until-expires content-type content-disposition)
   (bind ((result (make-instance 'byte-vector-response
                                 :body bytes
-                                :headers headers
+                                :headers (copy-alist headers)
                                 :cookies cookies
                                 :last-modified-at last-modified-at
                                 :external-format nil)))
@@ -333,6 +333,8 @@
                                                     (local-time:adjust-timestamp (local-time:now) (offset :sec seconds-until-expires)))))
     (when content-type
       (setf (header-value result +header/content-type+) content-type))
+    (when content-disposition
+      (setf (header-value result +header/content-disposition+) content-disposition))
     result))
 
 (def (macro e) make-byte-vector-response ((&optional headers-as-plist cookie-list) &body body)

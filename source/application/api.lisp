@@ -118,7 +118,7 @@ In case of success it returns a valid web session (potentially a freshly created
 
 (def (generic e) is-logged-in? (session)
   (:documentation "Should return T if we are in an authenticated session opened by a succesful LOGIN call.")
-  (:method (session)
+  (:method ((session null))
     #f))
 
 ;;;;;;

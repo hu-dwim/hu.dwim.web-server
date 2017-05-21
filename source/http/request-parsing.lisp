@@ -77,7 +77,7 @@
              (headers (aprog1
                           (parse-http-request-headers buffer position)
                         (http.dribble "Request headers are ~S" it))))
-        (bind ((host (or (assoc-value headers "Host" :test #'equal)
+        (bind ((host (or (assoc-value headers "Host" :test #'equalp)
                          (illegal-http-request/error "No \"Host\" header in the request")))
                (host-length (length host))
                (scheme (if https? "https" "http"))

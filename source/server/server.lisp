@@ -578,7 +578,12 @@
      ;; NOTE: deflate is not well supported with countless issue with countless browsers... don't use it!
      ;; details on the deflate bug in IE and Konqueror: https://bugs.kde.org/show_bug.cgi?id=117683
      ;; http://www.vervestudios.co/projects/compression-tests/results
-     (bind (((:values compressed-bytes compressed-bytes-length) (hu.dwim.util:deflate-sequence bytes-to-serve :window-bits -15))
+     ;; https://connect.microsoft.com/IE/feedback/details/1007412/interop-wininet-does-not-support-content-encoding-deflate-properly
+     ;; https://blogs.msdn.microsoft.com/ieinternals/2014/10/21/compressing-the-web/
+     (bind (((:values compressed-bytes compressed-bytes-length)
+             ;; NOTE: negative window-bits tells zlib not to add the header and the checksum in the footer: "In this case, -windowBits determines
+             ;; the window size. deflate() will then generate raw deflate data with no zlib header or trailer, and will not compute a check value."
+             (hu.dwim.util:deflate-sequence bytes-to-serve :window-bits -15))
             (compressed-bytes (coerce-to-simple-ub8-vector compressed-bytes compressed-bytes-length)))
        (server.debug "COMPRESS-RESPONSE/SEQUENCE with deflate; original-size ~A, compressed-size ~A, ratio: ~,3F" (length bytes-to-serve) compressed-bytes-length (/ compressed-bytes-length (length bytes-to-serve)))
        (assert (= (length compressed-bytes) compressed-bytes-length))

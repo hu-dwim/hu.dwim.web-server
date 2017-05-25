@@ -13,7 +13,7 @@
   (map-request-parameters (lambda (name value)
                             (declare (ignore name))
                             (when (typep value 'rfc2388-binary:mime-part)
-                              (delete-file (rfc2388-binary:content value))))
+                              (uiop:delete-file-if-exists (rfc2388-binary:content value))))
                           request)
   (values))
 

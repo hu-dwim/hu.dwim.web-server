@@ -13,7 +13,7 @@
   (:method ((context t))
     *profile-request-processing*))
 
-(def special-variable *debug-client-side* (debug-only t)
+(def special-variable *debug-client-side* #f
   "Should the client side run in debug mode?")
 
 (def (generic e) debug-client-side? (context)

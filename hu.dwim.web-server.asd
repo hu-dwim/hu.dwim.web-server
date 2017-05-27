@@ -28,7 +28,7 @@
                :hu.dwim.util
                :hu.dwim.util/error-handling
                :hu.dwim.util/temporary-files
-               :hu.dwim.util/zlib
+               :hu.dwim.zlib
                :iolib
                :iolib/pathnames
                :iolib/sockets

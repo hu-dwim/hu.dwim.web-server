@@ -558,15 +558,13 @@
           ;; we are changig the value of HEADERS and COOKIES here, so we must make the new values visible in the with-macro body hiding their initial values
           (-body- headers cookies)))))
 
-(def function default-response-compression (&key (supported-compressions '(:deflate)))
-  (bind ((compression (when (and (not *disable-response-compression*)
-                                 (accepts-encoding? +content-encoding/deflate+)
-                                 (member (kind-of (aif (and (boundp '*session*)
-                                                            (symbol-value '*session*))
-                                                       (http-user-agent-of it)
-                                                       (identify-http-user-agent *request*)))
-                                         '(:chrome :mozilla :opera)))
-                        :deflate)))
+(def function default-response-compression (&key (supported-compressions '(:deflate :gzip)))
+  (bind ((compression (unless *disable-response-compression*
+                        (cond
+                          ((accepts-encoding? +content-encoding/gzip+)
+                           :gzip)
+                          ((accepts-encoding? +content-encoding/deflate+)
+                           :deflate)))))
     (when (member compression supported-compressions)
       compression)))
 
@@ -574,40 +572,46 @@
   (ecase compression
     ((nil)
      (values bytes-to-serve nil))
-    (:deflate
+    ((:deflate :gzip)
      ;; NOTE: deflate is not well supported with countless issue with countless browsers... don't use it!
      ;; details on the deflate bug in IE and Konqueror: https://bugs.kde.org/show_bug.cgi?id=117683
      ;; http://www.vervestudios.co/projects/compression-tests/results
      ;; https://connect.microsoft.com/IE/feedback/details/1007412/interop-wininet-does-not-support-content-encoding-deflate-properly
      ;; https://blogs.msdn.microsoft.com/ieinternals/2014/10/21/compressing-the-web/
      (bind (((:values compressed-bytes compressed-bytes-length)
-             ;; NOTE: negative window-bits tells zlib not to add the header and the checksum in the footer: "In this case, -windowBits determines
-             ;; the window size. deflate() will then generate raw deflate data with no zlib header or trailer, and will not compute a check value."
-             (hu.dwim.util:deflate-sequence bytes-to-serve :window-bits -15))
+             (hu.dwim.zlib:deflate-sequence bytes-to-serve
+                 :container (ecase compression
+                              (:deflate :raw)
+                              (:gzip :gzip))
+                 :level 2))
             (compressed-bytes (coerce-to-simple-ub8-vector compressed-bytes compressed-bytes-length)))
        (server.debug "COMPRESS-RESPONSE/SEQUENCE with deflate; original-size ~A, compressed-size ~A, ratio: ~,3F" (length bytes-to-serve) compressed-bytes-length (/ compressed-bytes-length (length bytes-to-serve)))
        (assert (= (length compressed-bytes) compressed-bytes-length))
-       (values compressed-bytes +content-encoding/deflate+)))
-    (:gzip
-     (not-yet-implemented "gzip response compression"))))
+       (values compressed-bytes (ecase compression
+                                  (:deflate +content-encoding/deflate+)
+                                  (:gzip +content-encoding/gzip+)))))))
 
 (def function compress-response/stream (input output &key (compression (default-response-compression)))
   (ecase compression
     ((nil)
      (bind ((bytes-written (copy-stream input output)))
        (values bytes-written bytes-written nil)))
-    (:deflate
+    ((:deflate :gzip)
      (bind ((bytes-read 0)
-            (compressed-length (hu.dwim.util:deflate (lambda (buffer start size)
+            (compressed-length (hu.dwim.zlib:deflate (lambda (buffer start size)
                                                        (bind ((chunk-size (read-sequence buffer input :start start :end size)))
                                                          (incf bytes-read chunk-size)
                                                          chunk-size))
                                                      (lambda (buffer start size)
-                                                       (write-sequence buffer output :start start :end size)))))
+                                                       (write-sequence buffer output :start start :end size))
+                                 :container (ecase compression
+                                              (:deflate :raw)
+                                              (:gzip :gzip))
+                                 :level 2)))
        (server.debug "compress-response/stream with deflate; original-size ~A, compressed-size ~A, ratio: ~,3F" bytes-read compressed-length (/ compressed-length bytes-read))
-       (values bytes-read compressed-length +content-encoding/deflate+)))
-    (:gzip
-     (not-yet-implemented "gzip response compression"))))
+       (values bytes-read compressed-length (ecase compression
+                                              (:deflate +content-encoding/deflate+)
+                                              (:gzip +content-encoding/gzip+)))))))
 
 (def function serve-sequence (input &key
                                     (compress-content-with (default-response-compression))

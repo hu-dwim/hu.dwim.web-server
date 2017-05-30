@@ -7,7 +7,8 @@
 (in-package :hu.dwim.web-server)
 
 (def (function io) header-alist-value (alist header-name)
-  (cdr (assoc header-name alist :test #'string=)))
+  ;; NOTE: header names are not case sensitive
+  (cdr (assoc header-name alist :test #'equalp)))
 
 (define-setf-expander header-alist-value (alist header-name &environment env)
   (bind (((:values temps values new-value-for-setter setter getter) (get-setf-expansion alist env)))
@@ -18,7 +19,7 @@
               values
               `(,new-value)
               `(bind ((,alist ,getter))
-                 (aif (assoc ,header-name ,alist :test #'string=)
+                 (aif (assoc ,header-name ,alist :test #'equalp)
                       (setf (cdr it) ,new-value)
                       (bind ((,new-value-for-setter (list* (cons ,header-name ,new-value) ,alist)))
                         ,setter
@@ -49,7 +50,7 @@
              (write-sequence (string-to-iso-8859-1-octets value) stream)
              (write-crlf stream)
              (values)))
-    (bind ((status (or (assoc-value headers +header/status+ :test #'string=)
+    (bind ((status (or (assoc-value headers +header/status+ :test #'equalp)
                        +http-ok+))
            (date-header-seen? #f)
            (connection-header-seen? #f))
@@ -59,9 +60,9 @@
       (write-byte +space+ stream)
       (write-crlf stream)
       (dolist ((name . value) headers)
-        (when (string= name +header/date+)
+        (when (equalp name +header/date+)
           (setf date-header-seen? #t))
-        (when (string= name +header/connection+)
+        (when (equalp name +header/connection+)
           (setf connection-header-seen? #t))
         (when value
           (write-header-line name value)))

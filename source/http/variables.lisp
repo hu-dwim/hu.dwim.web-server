@@ -216,7 +216,7 @@
     +http-temporary-redirect+              307 "Temporary Redirect"
     +http-bad-request+                     400 "Bad Request"
     +http-authorization-required+          401 "Authorization Required"
-    +http-payment-required+                402  "Payment Required"
+    +http-payment-required+                402 "Payment Required"
     +http-forbidden+                       403 "Forbidden"
     +http-not-found+                       404 "Not Found"
     +http-method-not-allowed+              405 "Method Not Allowed"

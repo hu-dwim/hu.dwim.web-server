@@ -8,7 +8,7 @@
 
 (def special-variable *clone-request-uri/default-strip-query-parameters* nil)
 
-;; TODO rename to unwanted-parameters or somesuch
+;; TODO rename to unwanted-parameters, transient-parameters, or somesuch
 (def (function e) clone-request-uri (&key (strip-query-parameters *clone-request-uri/default-strip-query-parameters*)
                                           append-to-path)
   (bind ((uri (hu.dwim.uri:clone-uri (uri-of *request*))))

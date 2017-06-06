@@ -22,5 +22,5 @@
     (when append-to-path
       (etypecase append-to-path
         (string
-         (setf (path-of uri) (string+ (hu.dwim.uri:path-of uri) append-to-path)))))
+         (hu.dwim.uri:append-path uri append-to-path))))
     uri))

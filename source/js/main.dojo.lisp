@@ -397,7 +397,7 @@
             (eval script)))
         (throw (+ "Script tag with unexpected type: '" type "'")))))
 
-#+nil ;; unused, untested
+;; NOTE it's used by the GOOGLE-ANALYTICS/WIDGET in hdp. is it well tested?
 (defun hdws.io.eval-js-at-url (url &key (sync true) (on-success (lambda (type data event)))
                                (on-error hdws.io.process-ajax-network-error))
   (dojo.xhrGet (create :sync sync

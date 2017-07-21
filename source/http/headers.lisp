@@ -8,23 +8,12 @@
 
 (def (function io) header-alist-value (alist header-name)
   ;; NOTE: header names are not case sensitive
-  (cdr (assoc header-name alist :test #'equalp)))
+  (assoc-value alist header-name :test #'equalp))
 
-(define-setf-expander header-alist-value (alist header-name &environment env)
-  (bind (((:values temps values new-value-for-setter setter getter) (get-setf-expansion alist env)))
-    (assert (= 1 (length new-value-for-setter)))
-    (setf new-value-for-setter (first new-value-for-setter))
-    (with-unique-names (new-value alist)
-      (values temps
-              values
-              `(,new-value)
-              `(bind ((,alist ,getter))
-                 (aif (assoc ,header-name ,alist :test #'equalp)
-                      (setf (cdr it) ,new-value)
-                      (bind ((,new-value-for-setter (list* (cons ,header-name ,new-value) ,alist)))
-                        ,setter
-                        ,new-value)))
-              `(header-alist-value ,alist ,header-name)))))
+;; NOTE: it cannot be a simple (setf header-alist-value) function, because the place of the alist needs to be updated upon new insertion
+(def macro %set-header-alist-value (alist header-name new-value)
+  `(setf (assoc-value ,alist ,header-name :test #'equalp) ,new-value))
+(defsetf header-alist-value %set-header-alist-value)
 
 (def macro disallow-response-caching-in-header-alist (headers)
   (with-unique-names (header-name header-value)
@@ -50,7 +39,7 @@
              (write-sequence (string-to-iso-8859-1-octets value) stream)
              (write-crlf stream)
              (values)))
-    (bind ((status (or (assoc-value headers +header/status+ :test #'equalp)
+    (bind ((status (or (header-alist-value headers +header/status+)
                        +http-ok+))
            (date-header-seen? #f)
            (connection-header-seen? #f))

@@ -20,7 +20,7 @@
 ;; this is a stripped down version of the one in hu.dwim.presentation/source/component/widget/frame.lisp
 (def with-macro* emit-html-document/dojo (&key stylesheet-uris (script-uris (list (hu.dwim.uri:parse-uri "/hdws/js/main.dojo.js")))
                                                (content-mime-type +xhtml-mime-type+) (encoding :utf-8) title
-                                               (parse-dojo-widgets-on-load #f) (dojo-script-name "dojo.js") (dojo-skin-name "tundra")
+                                               (parse-dojo-widgets-on-load #f) (dojo-skin-name "tundra")
                                                (dojo-script-uri (hu.dwim.uri:append-path (hu.dwim.uri:clone-uri *dojo-base-uri*) "dojo/dojo.js")))
   (bind ((application *application*)
          (application-path (path-of application))
@@ -56,12 +56,12 @@
                     ", locale: " (to-js-literal (locale-name (locale (first (ensure-list (default-locale-of application))))))
                     "}")>
         <script (:type +javascript-mime-type+
-                 :src ,(bind ((uri (hu.dwim.uri:clone-uri dojo-release-uri)))
-                         (hu.dwim.uri:append-path uri "dojo/")
-                         (hu.dwim.uri:append-path uri (if debug-client-side?
-                                                          (string+ dojo-script-uri ".uncompressed.js")
-                                                          dojo-file-name))
-                         (hu.dwim.uri:print-uri-to-string uri)))
+                 :src ,(bind ((uri (hu.dwim.uri:clone-uri dojo-script-uri)))
+                          ;; we have the dojo release version in the url, so timestamps here are not important
+                          (hu.dwim.uri:prepend-path uri application-path)
+                          (when debug-client-side?
+                            (hu.dwim.uri:append-to-last-path-element uri ".uncompressed.js"))
+                          (hu.dwim.uri:print-uri-to-string uri)))
                  ;; it must have an empty body because browsers don't like collapsed <script ... /> in the head
                  "">
         ,(foreach (lambda (script-uri)

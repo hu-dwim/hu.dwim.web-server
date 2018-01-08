@@ -361,7 +361,8 @@
     (dojo.parser.instantiate dom-nodes))
 
   ;; this works for dojo 1.12.2
-  (bind ((widgets (array)))
+  (bind ((widgets (array))
+         (failed #f))
     ;; KLUDGE close popups here, otherwise an exception is thrown when they are closed but their dom node has already been deleted
     (dijit.popup.close)
     ;; phase 1: lookup dom nodes first, because instantiate can remove them from the dom tree
@@ -371,19 +372,29 @@
         (setf entry.node dom-node)))
     ;; phase 2: instantiate one-by-one but do not execute startup()
     (dolist (entry widget-entries)
-      (bind ((dom-node entry.node))
-        (dom-node.setAttribute "data-dojo-type" (slot-value entry "data-dojo-type"))
-        (awhen (dijit.byId dom-node.id)
-          ;; FIXME when destroying a MenuBar, popups are also destroyed, but dijit.popup._stack might have a reference to them
-          ;;       causing an exception
-          (.destroyRecursive it))
-        ;; TODO rename 'inherited' to 'mixin'
-        (widgets.push (aref (dojo.parser.instantiate (array dom-node) entry.inherited (create :no-start #t)) 0))))
+      (try
+           (bind ((dom-node entry.node))
+             (dom-node.setAttribute "data-dojo-type" (slot-value entry "data-dojo-type"))
+             (awhen (dijit.byId dom-node.id)
+               ;; FIXME when destroying a MenuBar, popups are also destroyed, but dijit.popup._stack might have a reference to them
+               ;;       causing an exception
+               (.destroyRecursive it))
+             ;; TODO rename 'inherited' to 'mixin'
+             (widgets.push (aref (dojo.parser.instantiate (array dom-node) entry.inherited (create :no-start #t)) 0)))
+        (catch (e)
+          (setf failed #t)
+          (log.error "Instantiate failed, skipping." e))))
     ;; phase 3: execute startup methods after each widget got instantiated
     (dolist (widget widgets)
-      (when (and (=== (type-of widget.startup) "function")
-                 (not widget._started))
-          (widget.startup)))))
+      (try
+           (when (and (=== (type-of widget.startup) "function")
+                      (not widget._started))
+             (widget.startup))
+        (catch (e)
+          (setf failed #t)
+          (log.error "Dojo widget startup failed, skipping." e))))
+    (when failed
+      (hdws.inform-user-about-error "error.generic-javascript-error"))))
 
 (defun hdws.io.postprocess-inserted-node (original-node imported-node)
   ;; this used to be needed before WITH-COLLAPSED-JS-SCRIPTS started to collect all js fragments into a toplevel script node in the ajax answer. might come handy for something later, so leave it for now...

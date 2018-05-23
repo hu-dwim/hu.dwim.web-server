@@ -63,6 +63,7 @@
    +dijit/content-pane+          "dijit.layout.ContentPane"
    +dijit/split-container+       "dijit.layout.SplitContainer"
    +dijit/tab-container+         "dijit.layout.TabContainer"
+   +dijit/form+                  "dijit.form.Form"
    +dijit/button+                "dijit.form.Button"
    +dijit/drop-down-button+      "dijit.form.DropDownButton"
    +dijit/date-text-box+         "dijit.form.DateTextBox"

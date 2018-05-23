@@ -157,13 +157,15 @@
 (setf hdws.io.sync-ajax-action-in-progress false)
 
 ;; open dojo issue about error handler not being called: http://bugs.dojotoolkit.org/ticket/10985
-(defun hdws.io.action (url &key on-success on-error event (ajax true) subject-dom-node (sync true) (xhr-sync false) (send-client-state true))
+(defun hdws.io.action (url &key on-success on-error event (ajax true) subject-dom-node (sync true) (xhr-sync false) (send-client-state true) form)
   (when event
     (setf url (hdws.decorate-url-with-modifier-keys url event)))
   (bind ((decorated-url (hdws.append-query-parameter url
                                                      #.(hu.dwim.uri:percent-encoding/encode +ajax-aware-parameter-name+)
                                                      (if ajax "t" "")))
-         (form (aref document.forms 0)))
+         (form (if form
+                   (dojo.byId form)
+                   (aref document.forms 0))))
     (if ajax
         (bind ((ajax-target (dojo.byId subject-dom-node))
                (ajax-indicator-teardown nil))

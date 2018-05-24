@@ -559,7 +559,7 @@
           (-body- headers cookies)))))
 
 (def function default-response-compression (&key (supported-compressions '(:deflate :gzip)))
-  (bind ((compression (unless *disable-response-compression*
+  (bind ((compression (when *enable-response-compression*
                         (cond
                           ((accepts-encoding? +content-encoding/gzip+)
                            :gzip)

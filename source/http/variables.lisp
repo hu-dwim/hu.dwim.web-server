@@ -27,8 +27,8 @@
 (def (special-variable :documentation "A unique identifier is assigned to each incoming request to help debugging. This variable holds that id while processing the request.")
   *request-id*)
 
-(def (special-variable e) *disable-response-compression* #f
-  "TRUE means that HTTP response will not be compressed, FALSE otherwise.")
+(def (special-variable e) *enable-response-compression* #t
+  "FALSE means that the HTTP response will not be compressed.")
 
 (def (special-variable e) *length-limit/http-request-head* (* 64 1024)
   "If the size of the head part of the HTTP request goes beyond this limit, then the parsing code will signal an error.")

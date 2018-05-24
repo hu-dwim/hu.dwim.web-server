@@ -25,7 +25,7 @@
       (call-next-method)
       (setf (accept-encodings-of request)
             (aprog1
-                (parse-accept-header-value (or (header-value request +header/accept-encoding+) ""))
+                (parse-header-value/accept (or (header-value request +header/accept-encoding+) ""))
               (http.dribble "Parsed the accept-encoding field for the request: ~A" it)))))
 
 (def method cookies-of :around ((request http-request))

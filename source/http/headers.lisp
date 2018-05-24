@@ -71,10 +71,10 @@
 ;;;;;;
 ;;; accept-header
 
-(def (function o) parse-accept-language-header-value (header-value)
+(def (function o) parse-header-value/accept-language (header-value)
   (check-type header-value string)
   (bind ((*print-pretty* #f)
-         (result (parse-accept-header-value header-value)))
+         (result (parse-header-value/accept header-value)))
     (labels ((convert-to-canonical-locale-name (key)
                (bind ((language nil)
                       (territory nil))
@@ -94,7 +94,7 @@
             (setf (car entry) (convert-to-canonical-locale-name (car entry)))))
     result))
 
-(def (function o) parse-accept-header-value (header-value)
+(def (function o) parse-header-value/accept (header-value)
   (check-type header-value string)
   (http.dribble "Parsing Accept header ~S" header-value)
   (bind ((*print-pretty* #f)
@@ -161,6 +161,6 @@
                (when (next-char)
                  (parse-key)))
              (emit-result ()
-               (return-from parse-accept-header-value
+               (return-from parse-header-value/accept
                  (sort entries #'> :key #'cdr))))
       (parse-key))))

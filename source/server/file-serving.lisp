@@ -221,13 +221,21 @@
   (aprog1
       (make-hash-table :test #'equal)
     (dolist (el '("png" "jpg" "jpeg" "gif"
-                  "z" "bz2" "gz" "tgz" "rar" "zip" "7z"))
+                  "z" "bz2" "gz" "tgz" "rar" "zip" "7z"
+                  "mp4" "m4a" "avi" "mkv"))
       (setf (gethash el it) t))))
+
+(def special-variable *file-compression/file-size-upper-limit* (* 16 (expt 2 20))) ; 16MB
 
 (def function compress-file-before-serving? (file)
   (check-type file (or pathname iolib.pathnames:file-path-designator))
-  (bind ((extension (iolib.pathnames:file-path-file-type (iolib.pathnames:file-path file))))
-    (not (gethash extension *file-compression/file-extension-blacklist*))))
+  (bind ((file-path (iolib.pathnames:file-path file))
+         (extension (iolib.pathnames:file-path-file-type file-path)))
+    (and *enable-response-compression*
+         (not (gethash extension *file-compression/file-extension-blacklist*))
+         (bind ((file-size (with-open-file (stream (iolib.pathnames:file-path-namestring file-path))
+                             (file-length stream))))
+           (<= file-size *file-compression/file-size-upper-limit*)))))
 
 ;;;;;;
 ;;; File serving response

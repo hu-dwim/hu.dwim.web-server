@@ -92,6 +92,8 @@
    +header/location+            "Location"
    +header/server+              "Server"
    +header/upgrade+             "Upgrade"
+   +header/range+               "Range"
+   +header/range-unit+          "Range-Unit"
    ))
 
 (macrolet ((x (&body entries)

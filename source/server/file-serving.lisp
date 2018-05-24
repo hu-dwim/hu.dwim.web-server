@@ -352,6 +352,7 @@
 (def special-variable *mime-type->for-download* nil)
 
 (def (function e) mime-time-for-download? (mime-type)
+  (check-type mime-type string)
   (values (gethash mime-type *mime-type->for-download*)))
 
 (def (function e) (setf mime-time-for-download?) (value mime-type)

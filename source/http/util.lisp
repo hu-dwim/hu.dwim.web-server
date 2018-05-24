@@ -14,6 +14,7 @@
         +default-encoding+))
 
   (def (function eio) content-type-for (mime-type &optional encoding)
+    (check-type mime-type string)
     (unless encoding
       (setf encoding (guess-encoding-for-http-response)))
     ;; this is a somewhat ugly optimization: return constants for the most often used combinations

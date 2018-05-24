@@ -164,3 +164,29 @@
                (return-from parse-header-value/accept
                  (sort entries #'> :key #'cdr))))
       (parse-key))))
+
+(def (function o) parse-header-value/range (range &optional range-unit)
+  "Parses Range-Unit and Range headers, and returns two values:
+  1. the list of `(,START . ,END) ranges, with END being exclusive
+  2. the RANGE-UNIT (as string, e.g. \"bytes\" or \"items\").
+  Note: If both Range-Unit and Range provide a unit, they must agree."
+  ;; convert range from string to (,start . ,end)
+  (when range
+    ;; extract range-unit
+    (bind ((=-pos (position #\= range)))
+      (when =-pos
+        (bind ((range-unit* (subseq range 0 =-pos)))
+          (if range-unit
+              (assert (string= range-unit range-unit*))
+              (setf range-unit range-unit*)))
+        (setf range (subseq range (1+ =-pos)))))
+    (flet ((parse-single-range (str)
+             ;; extract first and last (the latter being optional)
+             (bind (((first last) (uiop:split-string str :separator '(#\-)))) ;; TODO: error handling
+               ;; ... and convert to `(,START . ,END)
+               (cons (parse-integer first)
+                     (when (plusp (length last))
+                       (1+ (parse-integer last)))))))
+      (values (mapcar #'parse-single-range
+                      (uiop:split-string range :separator '(#\,)))
+              range-unit))))

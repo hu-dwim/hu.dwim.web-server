@@ -551,7 +551,8 @@
           (setf (header-alist-value headers +header/content-length+) "0")
           (send-http-headers headers cookies :stream stream))
         (progn
-          (setf (header-alist-value headers +header/status+) +http-ok+)
+          (unless (header-alist-value headers +header/status+)
+            (setf (header-alist-value headers +header/status+) +http-ok+))
           (when content-length
             (setf (header-alist-value headers +header/content-length+)
                   (integer-to-string content-length)))
@@ -695,7 +696,10 @@
                                          content-disposition-filename
                                          content-disposition-size
                                          (stream (client-stream-of *request*))
-                                         (seconds-until-expires #.(* 1 60 60)))
+                                         (seconds-until-expires #.(* 1 60 60))
+                                         (end content-length))
+  (check-type end (or null integer))
+  (check-type content-length (or null integer))
     (with-content-serving-logic ('serve-stream :last-modified-at last-modified-at
                                                :seconds-until-expires seconds-until-expires
                                                :headers headers
@@ -706,9 +710,13 @@
           (setf (header-alist-value headers +header/content-type+) it))
         (when (and (not content-length)
                    (typep input-stream 'file-stream))
-          (setf content-length (integer-to-string (file-length input-stream))))
+          (bind ((file-length (file-length input-stream)))
+            (assert (or (not end) (<= end file-length)))
+            (setf content-length (or end file-length))))
         (unless (stringp content-length)
           (setf content-length (integer-to-string content-length)))
+        (when (stringp end)
+          (setf end (parse-integer end)))
         (awhen content-length
           (setf (header-alist-value headers +header/content-length+) it))
         (unless content-disposition-p
@@ -728,63 +736,102 @@
         (server.debug "SERVE-STREAM starts to copy input stream ~A to the network stream ~A" input-stream stream)
         (loop
            :with buffer = (make-array 8192 :element-type '(unsigned-byte 8))
-           :for end-pos = (read-sequence buffer input-stream)
+           :for end-pos = (read-sequence buffer input-stream :end (when end (min end (length buffer))))
            :until (zerop end-pos)
            :do
            (progn
              (server.dribble "SERVE-STREAM will write ~A bytes to the network stream ~A" end-pos stream)
-             (write-sequence buffer stream :end end-pos)))
+             (write-sequence buffer stream :end end-pos)
+             (when end (decf end end-pos))))
         (server.debug "SERVE-STREAM finished copying input stream ~A to the network stream ~A" input-stream stream))))
 
 ;; TODO use sendfile somehow?
-;; TODO how about wget -c, aka seeking http requests?
 (def function serve-file (file-name &rest args &key
                                     (last-modified-at (local-time:universal-to-timestamp
                                                        (file-write-date file-name)))
-                                    (content-type nil content-type/provided?)
-                                    (for-download #f for-download/provided?)
-                                    (content-disposition-filename nil content-disposition-filename-p)
+                                    (mime-type (first (awhen (pathname-type file-name)
+                                                        (mime-types-for-extension it))))
+                                    (encoding :utf-8)
+                                    (content-type (or (and mime-type
+                                                           (content-type-for mime-type encoding))
+                                                      +octet-stream-mime-type+))
+                                    (for-download (and mime-type
+                                                       (mime-time-for-download? mime-type)))
+                                    (content-disposition-filename (string+ (pathname-name file-name)
+                                                                           (awhen (pathname-type file-name)
+                                                                             (string+ "." it))))
                                     headers
                                     cookies
                                     (stream (client-stream-of *request*))
                                     content-disposition-size
-                                    (encoding :utf-8)
                                     (seconds-until-expires #.(* 12 60 60))
                                     (signal-errors #t)
                                     &allow-other-keys)
+  "Write the given file directly into the response network stream, HTTP headers included.
+Returns (values success? error-condition client-stream-dirty?)."
   (with-thread-name " / SERVE-FILE"
     (remove-from-plistf args :signal-errors :for-download)
+    ;; tell the client that we accept byte range requests
+    (setf (header-alist-value headers +header/accept-ranges+) "bytes")
     (bind ((client-stream-dirty? #f))
-      (handler-bind ((serious-condition (lambda (error)
-                                          (unless signal-errors
-                                            (server.warn "SERVE-FILE muffles the following error due to :signal-errors #f: ~A" error)
-                                            (return-from serve-file (values #f error client-stream-dirty?))))))
-        (bind ((mime-type (first (awhen (pathname-type file-name)
-                                   (mime-types-for-extension it)))))
-          (unless content-type/provided?
-            (setf content-type (or (content-type-for mime-type encoding)
-                                   +octet-stream-mime-type+)))
-          (when (and mime-type
-                     (not for-download/provided?))
-            (setf for-download (mime-time-for-download? mime-type)))
-          (unless content-disposition-filename-p
-            (setf content-disposition-filename (string+ (pathname-name file-name)
-                                                        (awhen (pathname-type file-name)
-                                                          (string+ "." it)))))
+      (flet ((fail (&optional error-condition)
+               (return-from serve-file (values #f error-condition client-stream-dirty?)))
+             (requested-range (&key (unit "bytes"))
+               "Returns two values: START and END (the lisp kind, i.e. exclusive, not the HTTP kind, i.e. inclusive), or NIL if no range is requested."
+               (bind (((:values ranges range-unit) (parse-header-value/range
+                                                    (header-value *request* +header/range+)
+                                                    (header-value *request* +header/range-unit+))))
+                 (when ranges
+                   (assert (equalp unit range-unit))
+                   ;; If multiple ranges are requested, serve only the first one:
+                   (bind (((start1 . end1) (first ranges)))
+                     (server.debug "Range: ~A=~D-~@[~D~]" range-unit start1 end1)
+                     (when (rest ranges)
+                       (server.info "Serving only first range of ~D requested (~{~D-~@[~D~]~^,~})"
+                                    (length ranges)
+                                    (loop
+                                      :for (start . end) :in ranges
+                                      :collect start
+                                      :collect (when end (1- end)))))
+                     (values start1 end1))))))
+        (handler-bind ((serious-condition (lambda (error)
+                                            (unless signal-errors
+                                              (server.warn "SERVE-FILE muffles the following error due to :signal-errors #f: ~A" error)
+                                              (fail error)))))
           (with-open-file (file file-name :direction :input :element-type '(unsigned-byte 8))
-            (setf client-stream-dirty? #t)
-            (apply 'serve-stream
-                   file
-                   :last-modified-at last-modified-at
-                   :content-type content-type
-                   :content-disposition-filename content-disposition-filename
-                   :content-disposition-size content-disposition-size
-                   :seconds-until-expires seconds-until-expires
-                   :headers headers
-                   :cookies cookies
-                   :stream stream
-                   (append
-                    (unless for-download
-                      (list :content-disposition nil))
-                    args))
-            (values #t nil #f)))))))
+            (bind ((file-size (file-length file))
+                   (content-length file-size)
+                   ((:values start end) (requested-range :unit "bytes")))
+              (when start
+                ;; proper range: 0 <= start < end <= file-size (if end is given)
+                (unless end
+                  (setf end file-size))
+                (unless (or (<= 0 start end file-size)
+                            (= start end))
+                  (setf (header-alist-value headers +header/status+) +http-requested-range-not-satisfiable+)
+                  (send-http-headers headers cookies)
+                  (setf client-stream-dirty? #t)
+                  (fail))
+                (file-position file start)
+                (setf (header-alist-value headers +header/status+) +http-partial-content+)
+                (setf (header-alist-value headers +header/content-range+) (format nil "bytes ~D-~D/~D"
+                                                                                  ;; HTTP ranges are inclusive
+                                                                                  start (1- end) file-size))
+                (setf content-length (- end start)))
+              (setf client-stream-dirty? #t)
+              (apply 'serve-stream
+                     file
+                     :last-modified-at last-modified-at
+                     :content-type content-type
+                     :content-length content-length
+                     :content-disposition-filename content-disposition-filename
+                     :content-disposition-size content-disposition-size
+                     :seconds-until-expires seconds-until-expires
+                     :headers headers
+                     :cookies cookies
+                     :stream stream
+                     (append
+                      (unless for-download
+                        (list :content-disposition nil))
+                      args))
+              (values #t nil client-stream-dirty?))))))))

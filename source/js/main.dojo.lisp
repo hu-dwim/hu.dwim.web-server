@@ -571,56 +571,67 @@
       (dojo.removeClass node "ajax-replacement"))
     (setf hdws.io.marked-ajax-replacements (array))))
 
-(bind ((dom-replacer (hdws.io.make-ajax-answer-processor
-                      "dom-replacements"
-                      (lambda (replacement-node)
-                        (bind ((id (.getAttribute replacement-node "id"))
-                               (old-node ($ id)))
-                          (if old-node
-                              (bind ((parent-node (slot-value old-node 'parent-node))
-                                     (old-opacity (Math.min (dojo.style old-node "opacity") 0.5)))
-                                (log.debug "About to replace old node with id " id)
-                                (when (dojo.hasClass replacement-node "context-menu")
-                                  ;; KLUDGE dijit context menu looses dom node identity, so fading cannot work on it
-                                  (setf old-opacity 1))
-                                (dojo.style replacement-node "opacity" old-opacity)
-                                (.replace-child parent-node replacement-node old-node)
-                                (hdws.io.mark-ajax-replacement replacement-node)
-                                (log.debug "Fading back replacement-node " replacement-node)
-                                (bind ((animation (hdws.io.make-ajax-replacement-fade-in replacement-node old-opacity)))
-                                  (hdws.connect animation "onEnd"
-                                               (lambda ()
-                                                 (unless (eq replacement-node (dojo.byId id))
-                                                   ;; KLUDGE this should not happen, but it happens with context menus...
-                                                   (log.warn "Setting opacity to 1 of orphaned replacement-node with id " id)
-                                                   (dojo.style (dojo.byId id) "opacity" 1))))
-                                  (.play animation))
-                                (log.debug "Successfully replaced node with id " id))
-                              (progn
-                                (log.error "Old version of replacement node " replacement-node " with id '" id "' was not found on the client side")
-                                (hdws.maybe-invoke-debugger))))))))
-  (setf hdws.io.process-ajax-answer
-        (lambda (response args)
-          ;; replace some components (dom nodes)
-          (log.debug "hdws.io.process-ajax-answer speaking. Called with response " response ", args " args)
-          (log.debug "Calling dom-replacer...")
-          (dom-replacer response args)
-          (log.debug "...dom-replacer returned")
-          ;; look for 'script' tags and execute them with 'current-ajax-answer' bound
-          (let ((script-evaluator (hdws.io.make-ajax-answer-processor "script"
-                                                                     (lambda (script-node)
-                                                                       ;; TODO handle/assert for script type attribute
-                                                                       (let ((script (dojox.xml.parser.textContent script-node)))
-                                                                         (log.debug "About to eval AJAX-received script " #\Newline script)
-                                                                         ;; isolate the local bindings from the script to be executed
-                                                                         ;; and only bind with the given name what we explicitly list here
-                                                                         ((lambda (_script current-ajax-answer)
-                                                                            (eval _script)) script response)
-                                                                         (log.debug "Finished eval-ing AJAX-received script")))
-                                                                     false true)))
-            (log.debug "Calling script-evaluator...")
-            (script-evaluator response args)
-            (log.debug "...script-evaluator returned")))))
+(setf hdws.io.dom-replacer
+      (create
+       :replace (hdws.io.make-ajax-answer-processor
+                 "dom-replacements"
+                 (lambda (replacement-node)
+                   (bind ((id (.getAttribute replacement-node "id"))
+                          (old-node ($ id)))
+                     (if old-node
+                         (bind ((parent-node (slot-value old-node 'parent-node))
+                                (old-opacity (Math.min (dojo.style old-node "opacity") 0.5)))
+                           (log.debug "About to replace old node with id " id)
+                           (when (dojo.hasClass replacement-node "context-menu")
+                             ;; KLUDGE dijit context menu looses dom node identity, so fading cannot work on it
+                             (setf old-opacity 1))
+                           (dojo.style replacement-node "opacity" old-opacity)
+                           (.call hdws.io.dom-replacer.before-hook hdws.io.dom-replacer parent-node old-node replacement-node)
+                           (.replace-child parent-node replacement-node old-node)
+                           (.call hdws.io.dom-replacer.after-hook hdws.io.dom-replacer parent-node old-node replacement-node)
+                           (hdws.io.mark-ajax-replacement replacement-node)
+                           (log.debug "Fading back replacement-node " replacement-node)
+                           (bind ((animation (hdws.io.make-ajax-replacement-fade-in replacement-node old-opacity)))
+                             (hdws.connect animation "onEnd"
+                                           (lambda ()
+                                             (unless (eq replacement-node (dojo.byId id))
+                                               ;; KLUDGE this should not happen, but it happens with context menus...
+                                               (log.warn "Setting opacity to 1 of orphaned replacement-node with id " id)
+                                               (dojo.style (dojo.byId id) "opacity" 1))))
+                             (.play animation))
+                           (log.debug "Successfully replaced node with id " id))
+                         (progn
+                           (log.error "Old version of replacement node " replacement-node " with id '" id "' was not found on the client side")
+                           (hdws.maybe-invoke-debugger))))))
+       :before-hook (lambda (parent-node old-node replacement-node)
+                      ;; use the dojo.aspect module to attach custom behaviour
+                      )
+       :after-hook (lambda (parent-node old-node replacement-node)
+                     ;; use the dojo.aspect module to attach custom behaviour
+                     )))
+
+(setf hdws.io.process-ajax-answer
+      (lambda (response args)
+        ;; replace some components (dom nodes)
+        (log.debug "hdws.io.process-ajax-answer speaking. Called with response " response ", args " args)
+        (log.debug "Calling dom-replacer...")
+        (hdws.io.dom-replacer.replace response args)
+        (log.debug "...dom-replacer returned")
+        ;; look for 'script' tags and execute them with 'current-ajax-answer' bound
+        (let ((script-evaluator (hdws.io.make-ajax-answer-processor "script"
+                                                                    (lambda (script-node)
+                                                                      ;; TODO handle/assert for script type attribute
+                                                                      (let ((script (dojox.xml.parser.textContent script-node)))
+                                                                        (log.debug "About to eval AJAX-received script " #\Newline script)
+                                                                        ;; isolate the local bindings from the script to be executed
+                                                                        ;; and only bind with the given name what we explicitly list here
+                                                                        ((lambda (_script current-ajax-answer)
+                                                                           (eval _script)) script response)
+                                                                        (log.debug "Finished eval-ing AJAX-received script")))
+                                                                    false true)))
+          (log.debug "Calling script-evaluator...")
+          (script-evaluator response args)
+          (log.debug "...script-evaluator returned"))))
 
 ;;;;;;
 ;;; debug

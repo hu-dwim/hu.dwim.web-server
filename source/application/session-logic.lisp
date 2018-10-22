@@ -140,11 +140,11 @@
                        (next-frame-index (next-frame-index-of frame)))
                   (with-error-log-decorators ((make-error-log-decorator
                                                 (format t "~%Action: ~A" action))
-                                              #+sbcl
+                                              #+#.(hu.dwim.util:if-symbol-exists '#:sb-kernel '#:%funcallable-instance-fun)
                                               (make-error-log-decorator
                                                 (format t "~%Action source location: ~S"
                                                         (when action
-                                                          (swank-backend:find-source-location (sb-kernel:funcallable-instance-fun action))))))
+                                                          (swank-backend:find-source-location (sb-kernel::%funcallable-instance-fun action))))))
                     (unless (stringp current-frame-index)
                       (setf current-frame-index (integer-to-string current-frame-index)))
                     (unless (stringp next-frame-index)

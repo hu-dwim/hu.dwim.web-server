@@ -65,9 +65,10 @@
                 (symbol-value '*application*))
       (format stream "Application:                                ~A~%" it)
       (terpri))
+    #+#.(hu.dwim.util:if-symbol-exists '#:sb-kernel '#:dynamic-usage)
     (format stream "Heap usage:                                 ~,2F MBytes~%" (/ (sb-kernel::dynamic-usage) 1024 1024))
+    #+#.(hu.dwim.util:if-symbol-exists '#:sb-thread '#:list-all-threads)
     (format stream "Number of threads running:                  ~A~%" (length (sb-thread::list-all-threads)))
-    ;;(format stream "Maximum heap size: ~,2F MB~%" (/ (sb-kernel::dynamic-) 1024d0 1024d0))
     (format stream "Elapsed time rendering this response:       ~,4F seconds~%" (local-time:timestamp-difference (local-time:now) start))))
 
 ;;;;;;

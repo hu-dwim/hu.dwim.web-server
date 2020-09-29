@@ -53,7 +53,7 @@
    (worker-id (make-atomic-counter))
    (maximum-worker-count 16 :type integer :export :accessor)
    (occupied-worker-count 0 :type integer) ; only accessed while having the lock on the server, so doesn't need to be atomic
-   (started-at nil :type local-time:timestamp)
+   (started-at nil :type (or null local-time:timestamp))
    (timer nil)
    (profile-request-processing? :type boolean :reader nil :writer (setf profile-request-processing?))))
 

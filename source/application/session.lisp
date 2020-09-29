@@ -30,10 +30,10 @@
        (time-to-live-of self))))
 
 (def class* string-id-mixin ()
-  ((id nil :type string)))
+  ((id nil :type (or null string))))
 
 (def class* string-id-for-funcallable-mixin ()
-  ((id nil :type string))
+  ((id nil :type (or null string)))
   (:metaclass funcallable-standard-class))
 
 (def print-object (string-id-mixin :identity #t :type #f)
@@ -57,7 +57,7 @@
                      activity-monitor-mixin
                      debug-context-mixin)
   ((http-user-agent (identify-http-user-agent *request*) :type http-user-agent)
-   (application nil :type application)
+   (application nil :type (or null application))
    (client-timezone (default-timezone-of *application*) :type local-time::timezone)
    (frame-timeout *default-frame-timeout* :type integer)
    (frame-id->frame (make-hash-table :test 'equal) :type hash-table)

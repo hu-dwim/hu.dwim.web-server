@@ -17,7 +17,7 @@
 
 ;; TODO abstract away hu.dwim.presentation component dependency
 (def class* frame (string-id-mixin activity-monitor-mixin)
-  ((session nil :type session)
+  ((session nil :type (or null session))
    (unique-counter 0 :type integer)
    (frame-index (generate-frame-index) :type string)
    (next-frame-index (generate-frame-index 0) :type string)

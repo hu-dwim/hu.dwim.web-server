@@ -14,10 +14,10 @@
   (:documentation "A login-data is an object that encapsulates information that should be used for authentication. It can be used for dispatching in later phases of the authentication. The EXTRA-ARGUMENTS slot can hold some &rest keyword arguments that is useful later on."))
 
 (def (class* ea) login-data/identifier (login-data)
-  ((identifier nil :type string)))
+  ((identifier nil :type (or null string))))
 
 (def (class* ea) login-data/identifier-and-password (login-data/identifier)
-  ((password nil :type string)))
+  ((password nil :type (or null string))))
 
 (def print-object login-data/identifier-and-password
   (write-string "identifier: ")

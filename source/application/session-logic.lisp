@@ -153,13 +153,14 @@
                     (cond
                       ((and action
                             incoming-frame-index)
-                       (bind ((original-frame-index nil))
+                       (bind (;;(original-frame-index nil)
+                              )
                          (unwind-protect-case ()
                              (if (equal incoming-frame-index next-frame-index)
                                  (progn
                                    (app.dribble "Found an action and frame is in sync...")
-                                   (unless *delayed-content-request*
-                                     (setf original-frame-index (step-to-next-frame-index frame)))
+                                   ;; (unless *delayed-content-request*
+                                   ;;   (setf original-frame-index (step-to-next-frame-index frame)))
                                    (app.debug "Calling the action now...")
                                    (bind ((response (call-action application session frame action)))
                                      (app.dribble "Action returned response ~A" response)

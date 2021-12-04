@@ -110,9 +110,6 @@ message-type is :text or :binary"))
 
 ;;; Request/reply Hunchentoot overrides
 ;;;
-(def class* websocket-request (request)
-  ((broker nil :documentation "Broker of the current request (of type websocket-broker)")))
-
 (defclass websocket-reply (http-response) ())
 
 (defmethod initialize-instance :after ((reply websocket-reply) &rest initargs)
@@ -438,7 +435,7 @@ message-type is :text or :binary"))
 ;;; websocket-broker
 
 (def class* websocket-request (http-request)
-  ())
+  ((broker nil :documentation "Broker of the current request (of type websocket-broker)")))
 
 (def class* websocket-response (primitive-http-response)
   ((broker :type websocket-broker)))

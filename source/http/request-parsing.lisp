@@ -180,6 +180,9 @@
       (http-method))
     (unless (member http-method +valid-http-methods+ :test #'string=)
       (illegal-http-request/error "Illegal HTTP method ~S" http-method))
+    (unless (and http-method uri version)
+      ;; https://www.w3.org/Protocols/rfc2616/rfc2616-sec5.html
+      (illegal-http-request/error "Illegal HTTP request, mandatory param missing"))
     ;; TODO check uri and version for valid characters? or later while parsing them?
     (values http-method uri version position)))
 

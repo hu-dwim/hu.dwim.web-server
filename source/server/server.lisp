@@ -481,9 +481,9 @@
   (bind ((*length-limit/http-request-body* length-limit))
     (if (request-body-has-been-parsed? request)
         ;; NOTE: is it a bug when this happens?
-        (http.dribble "~S: already parsed" -this-function/name-)
+        (http.dribble "~S: already parsed" -this-definition/name-)
         (progn
-          (http.dribble "~S is initiating the parsing of the request body" -this-function/name-)
+          (http.dribble "~S is initiating the parsing of the request body" -this-definition/name-)
           (setf (request-body-has-been-parsed? request) t)
           (setf (query-parameters-of request) (parse-http-request/body (client-stream-of request)
                                                                        (header-value request +header/content-length+)

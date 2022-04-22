@@ -221,25 +221,25 @@
             (values))))))
 
 ;; TODO this is broken
-(def (macro e) js-to-lisp-rpc (&environment env &body body)
-  (bind ((walked-body (hu.dwim.walker:walk-form `(progn ,@body) :environment (hu.dwim.walker:make-walk-environment env)))
-         (free-variable-references (hu.dwim.walker:collect-variable-references walked-body :type 'hu.dwim.walker:free-variable-reference-form))
-         (variable-names (remove-duplicates (mapcar [hu.dwim.walker:name-of !1]
-                                                    free-variable-references)))
-         (query-parameters (mapcar [unique-js-name (string-downcase !1)]
-                                   variable-names)))
-    ` `js-inline(hdws.io.xhr-post
-                 ;; TODO follow keywordification of xhr-post
-                  (create
-                   :content (create ,@(list ,@(iter (for variable-name :in variable-names)
-                                                    (for query-parameter :in query-parameters)
-                                                    (collect `(quote ,query-parameter))
-                                                    (collect `js-inline(.toString ,variable-name)))))
-                   :url ,(action/href (:delayed-content #t)
-                           (with-request-parameters ,(mapcar [list !1 !2]
-                                                             variable-names
-                                                             query-parameters)
-                             ,@body))
-                   :load (lambda (response args)
-                           ;; TODO process the return value, possible ajax replacements, etc
-                           )))))
+;; (def (macro e) js-to-lisp-rpc (&environment env &body body)
+;;   (bind ((walked-body (hu.dwim.walker:walk-form `(progn ,@body) :environment (hu.dwim.walker:make-walk-environment env)))
+;;          (free-variable-references (hu.dwim.walker:collect-variable-references walked-body :type 'hu.dwim.walker:free-variable-reference-form))
+;;          (variable-names (remove-duplicates (mapcar [hu.dwim.walker:name-of !1]
+;;                                                     free-variable-references)))
+;;          (query-parameters (mapcar [unique-js-name (string-downcase !1)]
+;;                                    variable-names)))
+;;     ` `js-inline(hdws.io.xhr-post
+;;                  ;; TODO follow keywordification of xhr-post
+;;                   (create
+;;                    :content (create ,@(list ,@(iter (for variable-name :in variable-names)
+;;                                                     (for query-parameter :in query-parameters)
+;;                                                     (collect `(quote ,query-parameter))
+;;                                                     (collect `js-inline(.toString ,variable-name)))))
+;;                    :url ,(action/href (:delayed-content #t)
+;;                            (with-request-parameters ,(mapcar [list !1 !2]
+;;                                                              variable-names
+;;                                                              query-parameters)
+;;                              ,@body))
+;;                    :load (lambda (response args)
+;;                            ;; TODO process the return value, possible ajax replacements, etc
+;;                            )))))
